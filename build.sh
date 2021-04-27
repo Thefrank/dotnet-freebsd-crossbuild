@@ -40,7 +40,7 @@ aspnetcore/build.sh -c Release -ci --os-name freebsd -pack -nobl /p:CrossgenOutp
 ## Build Installer
 git clone --depth 1 --branch $INSTALLERTAG https://github.com/dotnet/installer.git
 ### Fixup (adds support for RID freebsd-x64)
-git -C installer apply ../dotnet-freebsd-crossbuild/patches/installer/0001-freebsd-support.patch
+git -C installer apply ../patches/0001-freebsd-support.patch
 sed -i 's/NetCore5AppHostRids Include="@(NetCore31RuntimePackRids)/NetCore5AppHostRids Include="@(NetCore31RuntimePackRids);freebsd-x64/' installer/src/redist/targets/GenerateBundledVersions.targets
 sed -i 's/AspNetCore50RuntimePackRids Include="@(AspNetCore31RuntimePackRids)/AspNetCore50RuntimePackRids Include="@(AspNetCore31RuntimePackRids);freebsd-x64/' installer/src/redist/targets/GenerateBundledVersions.targets
 ### dotnet NuGet Source Fixes (remove historically problematic/private feed that seem to only appear here, add prior build outputs, and remove any internal feeds)
