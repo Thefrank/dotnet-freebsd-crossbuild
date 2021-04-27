@@ -33,6 +33,21 @@ For building dotNET under FreeBSD natively:
 - the contents of `./nuget/`
 - numerous other patches not covered here
 
+## Can I use the NuGet packages to build for FreeBSD on other platforms?
+MAYBE!
+
+Microsoft does not have RID support for FreeBSD in its SDK. You must manually patch this in! Adjust path as needed.
+
+BSD `sed`: `sed -i.ORI 's/osx-x64/osx-x64;freebsd-x64/' ../sdk/SDKVERSIONNUMBER/Microsoft.NETCoreSdk.BundledVersions.props`
+
+GNU `sed`: `sed -i 's/osx-x64/osx-x64;freebsd-x64/' ../sdk/SDKVERSIONNUMBER/Microsoft.NETCoreSdk.BundledVersions.props`
+
+You will also need these NuGet packages produced by this repo or the Azure version repo:
+
+ - Microsoft.NETCore.App.Host.freebsd-x64.VERSION.nupkg
+ - Microsoft.NETCore.App.Runtime.freebsd-x64.VERSION.nupkg
+ - Microsoft.AspNetCore.App.Runtime.freebsd-x64.VERSION.nupkg
+
 ## Got Azure DevOPS version?
 Yes! Please see https://github.com/Servarr/dotnet-bsd
 
