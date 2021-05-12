@@ -1,6 +1,8 @@
 # dotnet-freebsd-crossbuild
 Bash script and patches for building dotNET for FreeBSD under Linux
 
+Currently working for: v5.0.6 (SDK v5.0.203) and older
+
 ## Why would I use this?
 You don't need / want SDK builds in Azure DevOPS
 
@@ -10,7 +12,7 @@ You are allergic to YAML
 
 ## How do I use this?
 
-run as root:
+run as root/sudo:
 
 1. setup.sh
 2. build.sh
@@ -53,3 +55,5 @@ Yes! Please see https://github.com/Servarr/dotnet-bsd
 
 ## I am too lazy to build this! Got a prebuilt SDK?
 Yes! Also covered by the above!
+
+I also try and publish it here too, open a ticket if I am more than a few days behind an official release.
