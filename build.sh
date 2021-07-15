@@ -6,17 +6,17 @@ set -e
 ##NOTE1: dotnet5 installer (aka SDK version number) is currently under v5.0.2xx but originally was v5.0.1xx for v5.0.0 to v5.0.3 and is why revision numbers do not match
 ##NOTE2: For best results use all the same tags as found here: https://github.com/dotnet/core/tags for each component. 
 
-RUNTIMETAG=v5.0.5
-ASPNETTAG=v5.0.5
-INSTALLERTAG=v5.0.202
+RUNTIMETAG=v5.0.8
+ASPNETTAG=v5.0.8
+INSTALLERTAG=v5.0.302
 
 ####
 
 ## Build Runtime Block
 git clone --depth 1 --branch $RUNTIMETAG https://github.com/dotnet/runtime.git
 sed -i '/\/dnceng\/internal\//d' runtime/NuGet.config
-### Build Runtime in Docker (we look for the freebsd 11 variant as it still has support until end of 2021 and gives most compatibility)
-DOTNET_DOCKER_TAG="mcr.microsoft.com/dotnet-buildtools/prereqs:$(curl -s https://raw.githubusercontent.com/dotnet/versions/master/build-info/docker/image-info.dotnet-dotnet-buildtools-prereqs-docker-main.json | jq -r '.repos[0].images[] | select(.platforms[0].dockerfile | contains("freebsd/11")) | .platforms[0].simpleTags[0]')"
+### Build Runtime in Docker (we look for the freebsd 12 variant as 11 is EOL)
+DOTNET_DOCKER_TAG="mcr.microsoft.com/dotnet-buildtools/prereqs:$(curl -s https://raw.githubusercontent.com/dotnet/versions/master/build-info/docker/image-info.dotnet-dotnet-buildtools-prereqs-docker-main.json | jq -r '.repos[0].images[] | select(.platforms[0].dockerfile | contains("freebsd/12")) | .platforms[0].simpleTags[0]')"
 docker run -e ROOTFS_DIR=/crossrootfs/x64 -v $(pwd)/runtime:/runtime $DOTNET_DOCKER_TAG /runtime/build.sh -c Release -cross -os freebsd -ci /p:OfficialBuildId=$(date +%Y%m%d)-99
 
 ######
@@ -33,7 +33,7 @@ dotnet nuget add source ../runtime/artifacts/packages/Release/Shipping --name ru
 mkdir -p aspnetcore/artifacts/obj/Microsoft.AspNetCore.App.Runtime
 cp runtime/artifacts/packages/Release/Shipping/dotnet-runtime-5.*-freebsd-x64.tar.gz aspnetcore/artifacts/obj/Microsoft.AspNetCore.App.Runtime
 ### Build AspNetCore (no crossgen because not actually supported and it will fail if it tries)
-aspnetcore/build.sh -c Release -ci --os-name freebsd -pack -nobl /p:CrossgenOutput=false /p:OfficialBuildId=$(date +%Y%m%d)-99
+aspnetcore/build.sh -c Release -ci --os-name freebsd -pack /p:CrossgenOutput=false /p:OfficialBuildId=$(date +%Y%m%d)-99
 
 #####
 
