@@ -6,9 +6,9 @@ set -e
 ##NOTE1: dotnet5 installer (aka SDK version number) is currently under v5.0.2xx but originally was v5.0.1xx for v5.0.0 to v5.0.3 and is why revision numbers do not match
 ##NOTE2: For best results use all the same tags as found here: https://github.com/dotnet/core/tags for each component. 
 
-RUNTIMETAG=v5.0.8
-ASPNETTAG=v5.0.8
-INSTALLERTAG=v5.0.302
+RUNTIMETAG=v5.0.9
+ASPNETTAG=v5.0.9
+INSTALLERTAG=v5.0.400
 
 ####
 
