@@ -6,15 +6,17 @@ set -e
 ##NOTE1: dotnet5 installer (aka SDK version number) is currently under v5.0.2xx but originally was v5.0.1xx for v5.0.0 to v5.0.3 and is why revision numbers do not match
 ##NOTE2: For best results use all the same tags as found here: https://github.com/dotnet/core/tags for each component. 
 
-RUNTIMETAG=v5.0.9
-ASPNETTAG=v5.0.9
-INSTALLERTAG=v5.0.400
+RUNTIMETAG=v6.0.0
+ASPNETTAG=v6.0.0
+INSTALLERTAG=v6.0.100-rtm.21527.11
 
 ####
 
 ## Build Runtime Block
 git clone --depth 1 --branch $RUNTIMETAG https://github.com/dotnet/runtime.git
 sed -i '/\/dnceng\/internal\//d' runtime/NuGet.config
+## Patch
+git -C runtime apply ../patches/patch_runtimeRTM.patch
 ### Build Runtime in Docker (we look for the freebsd 12 variant as 11 is EOL)
 DOTNET_DOCKER_TAG="mcr.microsoft.com/dotnet-buildtools/prereqs:$(curl -s https://raw.githubusercontent.com/dotnet/versions/master/build-info/docker/image-info.dotnet-dotnet-buildtools-prereqs-docker-main.json | jq -r '.repos[0].images[] | select(.platforms[0].dockerfile | contains("freebsd/12")) | .platforms[0].simpleTags[0]')"
 docker run -e ROOTFS_DIR=/crossrootfs/x64 -v $(pwd)/runtime:/runtime $DOTNET_DOCKER_TAG /runtime/build.sh -c Release -cross -os freebsd -ci /p:OfficialBuildId=$(date +%Y%m%d)-99
@@ -24,14 +26,13 @@ docker run -e ROOTFS_DIR=/crossrootfs/x64 -v $(pwd)/runtime:/runtime $DOTNET_DOC
 ## Build AspNetCore
 git clone --recursive --depth 1 --branch $ASPNETTAG https://github.com/dotnet/aspnetcore.git
 ### Fixup (adds support for RID freebsd-x64, removes Microsoft internal NuGet feeds because Microsoft does not do this!)
-sed -i '/linux-x64;/a \ \ \ \ \ \ freebsd-x64;' aspnetcore/Directory.Build.props
-sed -i '/<LatestPackageReference Include="Microsoft.NETCore.App.Runtime.linux-x64" \/>/a \ \ \ \ <LatestPackageReference Include="Microsoft.NETCore.App.Runtime.freebsd-x64" \/>' aspnetcore/eng/Dependencies.props
+git -C aspnetcore apply ../patches/patch_aspnetcoreRTM.patch
 sed -i '/\/dnceng\/internal\//d' aspnetcore/NuGet.config
 ### dotnet NuGet Source Fix (add prior build output)
 dotnet nuget add source ../runtime/artifacts/packages/Release/Shipping --name runtime --configfile aspnetcore/NuGet.config
 ### Copy Missing Item (restore will try but fail to find this so we have to add it manually)
 mkdir -p aspnetcore/artifacts/obj/Microsoft.AspNetCore.App.Runtime
-cp runtime/artifacts/packages/Release/Shipping/dotnet-runtime-5.*-freebsd-x64.tar.gz aspnetcore/artifacts/obj/Microsoft.AspNetCore.App.Runtime
+cp runtime/artifacts/packages/Release/Shipping/dotnet-runtime-*-freebsd-x64.tar.gz aspnetcore/artifacts/obj/Microsoft.AspNetCore.App.Runtime
 ### Build AspNetCore (no crossgen because not actually supported and it will fail if it tries)
 aspnetcore/build.sh -c Release -ci --os-name freebsd -pack /p:CrossgenOutput=false /p:OfficialBuildId=$(date +%Y%m%d)-99
 
@@ -40,14 +41,12 @@ aspnetcore/build.sh -c Release -ci --os-name freebsd -pack /p:CrossgenOutput=fal
 ## Build Installer
 git clone --depth 1 --branch $INSTALLERTAG https://github.com/dotnet/installer.git
 ### Fixup (adds support for RID freebsd-x64)
-git -C installer apply ../patches/0001-freebsd-support.patch
-sed -i 's/NetCore5AppHostRids Include="/NetCore5AppHostRids Include="freebsd-x64;/' installer/src/redist/targets/GenerateBundledVersions.targets
-sed -i 's/AspNetCore50RuntimePackRids Include="@(AspNetCore31RuntimePackRids)/AspNetCore50RuntimePackRids Include="@(AspNetCore31RuntimePackRids);freebsd-x64/' installer/src/redist/targets/GenerateBundledVersions.targets
+git -C installer apply ../patches/patch_installerRTM.patch
 ### dotnet NuGet Source Fixes (remove historically problematic/private feed that seem to only appear here, add prior build outputs, and remove any internal feeds)
 dotnet nuget remove source msbuild --configfile installer/NuGet.config || true
 dotnet nuget remove source nuget-build --configfile installer/NuGet.config || true
-dotnet nuget add source ../runtime/artifacts/packages/Release/Shipping --name runtime --configfile installer/NuGet.config
-dotnet nuget add source ../aspnetcore/artifacts/packages/Release/Shipping --name aspnetcore --configfile installer/NuGet.config
+dotnet nuget add source ../runtime/artifacts/packages/Release/Shipping --name runtime --configfile installer/NuGet.config || true
+dotnet nuget add source ../aspnetcore/artifacts/packages/Release/Shipping --name aspnetcore --configfile installer/NuGet.config || true
 sed -i '/\/dnceng\/internal\//d' installer/NuGet.config
 ### Copy Missing Items (same as aspnetcore step but we need its output too)
 mkdir -p installer/artifacts/obj/redist/Release/downloads/
