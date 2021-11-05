@@ -1,0 +1,20 @@
+diff --git a/eng/Dependencies.props b/eng/Dependencies.props
+index 3c179c39ae..10318f938c 100644
+--- a/eng/Dependencies.props
++++ b/eng/Dependencies.props
+@@ -93,6 +93,7 @@ and are generated based on the last package release.
+     <LatestPackageReference Include="Microsoft.NETCore.App.Runtime.linux-musl-x64" />
+     <LatestPackageReference Include="Microsoft.NETCore.App.Runtime.linux-musl-arm" />
+     <LatestPackageReference Include="Microsoft.NETCore.App.Runtime.linux-musl-arm64" />
++    <LatestPackageReference Include="Microsoft.NETCore.App.Runtime.freebsd-x64" />
+ 
+     <!-- Crossgen2 compiler -->
+     <LatestPackageReference Include="Microsoft.NETCore.App.Crossgen2.osx-x64" />
+@@ -107,6 +108,7 @@ and are generated based on the last package release.
+     <LatestPackageReference Include="Microsoft.NETCore.App.Crossgen2.win-x86" />
+     <LatestPackageReference Include="Microsoft.NETCore.App.Crossgen2.win-arm" />
+     <LatestPackageReference Include="Microsoft.NETCore.App.Crossgen2.win-arm64" />
++    <LatestPackageReference Include="Microsoft.NETCore.App.Crossgen2.freebsd-x64" />
+   </ItemGroup>
+ 
+   <ItemGroup Label=".NET team dependencies (Non-source-build)" Condition="'$(DotNetBuildFromSource)' != 'true'">

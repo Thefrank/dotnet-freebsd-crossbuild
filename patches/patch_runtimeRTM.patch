@@ -1,0 +1,587 @@
+diff --git a/eng/common/cross/toolchain.cmake b/eng/common/cross/toolchain.cmake
+index ec8971eb019..8f0ade33a35 100644
+--- a/eng/common/cross/toolchain.cmake
++++ b/eng/common/cross/toolchain.cmake
+@@ -44,7 +44,7 @@ elseif(TARGET_ARCH_NAME STREQUAL "x86")
+   set(TOOLCHAIN "i686-linux-gnu")
+ elseif (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+   set(CMAKE_SYSTEM_PROCESSOR "x86_64")
+-  set(triple "x86_64-unknown-freebsd11")
++  set(triple "x86_64-unknown-freebsd12")
+ elseif (ILLUMOS)
+   set(CMAKE_SYSTEM_PROCESSOR "x86_64")
+   set(TOOLCHAIN "x86_64-illumos")
+@@ -90,6 +90,9 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+     set(CMAKE_C_COMPILER_TARGET ${triple})
+     set(CMAKE_CXX_COMPILER_TARGET ${triple})
+     set(CMAKE_ASM_COMPILER_TARGET ${triple})
++    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
++    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=lld")
++    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fuse-ld=lld")
+     set(CMAKE_SYSROOT "${CROSS_ROOTFS}")
+ elseif(ILLUMOS)
+     set(CMAKE_SYSROOT "${CROSS_ROOTFS}")
+diff --git a/eng/pipelines/common/platform-matrix.yml b/eng/pipelines/common/platform-matrix.yml
+index 15fe948e929..bc8803b8487 100644
+--- a/eng/pipelines/common/platform-matrix.yml
++++ b/eng/pipelines/common/platform-matrix.yml
+@@ -262,7 +262,7 @@ jobs:
+       targetRid: freebsd-x64
+       platform: FreeBSD_x64
+       container:
+-        image: ubuntu-18.04-cross-freebsd-11-20200407092345-a84b0d2
++        image: ubuntu-18.04-cross-freebsd-12-20210813173449-f13d79e
+         registry: mcr
+       jobParameters:
+         runtimeFlavor: ${{ parameters.runtimeFlavor }}
+diff --git a/src/coreclr/tools/aot/crossgen2/Program.cs b/src/coreclr/tools/aot/crossgen2/Program.cs
+index afae84f57f6..8c9c0045309 100644
+--- a/src/coreclr/tools/aot/crossgen2/Program.cs
++++ b/src/coreclr/tools/aot/crossgen2/Program.cs
+@@ -54,6 +54,8 @@ public static void ComputeDefaultOptions(out TargetOS os, out TargetArchitecture
+                 os = TargetOS.Linux;
+             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                 os = TargetOS.OSX;
++            else if (RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD))
++                os = TargetOS.FreeBSD;
+             else
+                 throw new NotImplementedException();
+ 
+@@ -209,6 +211,8 @@ private void ConfigureTarget()
+                     _targetOS = TargetOS.Linux;
+                 else if (_commandLineOptions.TargetOS.Equals("osx", StringComparison.OrdinalIgnoreCase))
+                     _targetOS = TargetOS.OSX;
++                else if (_commandLineOptions.TargetOS.Equals("freebsd", StringComparison.OrdinalIgnoreCase))
++                     _targetOS = TargetOS.FreeBSD;
+                 else
+                     throw new CommandLineException(SR.TargetOSUnsupported);
+             }
+diff --git a/src/installer/managed/Microsoft.NET.HostModel/Bundle/TargetInfo.cs b/src/installer/managed/Microsoft.NET.HostModel/Bundle/TargetInfo.cs
+index 2d3f6566a5a..773eee15ad1 100644
+--- a/src/installer/managed/Microsoft.NET.HostModel/Bundle/TargetInfo.cs
++++ b/src/installer/managed/Microsoft.NET.HostModel/Bundle/TargetInfo.cs
+@@ -35,7 +35,7 @@ public TargetInfo(OSPlatform? os, Architecture? arch, Version targetFrameworkVer
+             Arch = arch ?? RuntimeInformation.OSArchitecture;
+             FrameworkVersion = targetFrameworkVersion ?? net60;
+ 
+-            Debug.Assert(IsLinux || IsOSX || IsWindows);
++            Debug.Assert(IsLinux || IsOSX || IsWindows || IsFreeBSD);
+ 
+             if (FrameworkVersion.CompareTo(net60) >= 0)
+             {
+@@ -73,7 +73,7 @@ public TargetInfo(OSPlatform? os, Architecture? arch, Version targetFrameworkVer
+ 
+         public bool IsNativeBinary(string filePath)
+         {
+-            return IsLinux ? ElfUtils.IsElfImage(filePath) : IsOSX ? MachOUtils.IsMachOImage(filePath) : PEUtils.IsPEImage(filePath);
++            return (IsLinux || IsFreeBSD) ? ElfUtils.IsElfImage(filePath) : IsOSX ? MachOUtils.IsMachOImage(filePath) : PEUtils.IsPEImage(filePath);
+         }
+ 
+         public string GetAssemblyName(string hostName)
+@@ -85,17 +85,19 @@ public string GetAssemblyName(string hostName)
+ 
+         public override string ToString()
+         {
+-            string os = IsWindows ? "win" : IsLinux ? "linux" : "osx";
++            string os = IsWindows ? "win" : IsLinux ? "linux" : IsFreeBSD ? "freebsd" : "osx";
+             string arch = Arch.ToString().ToLowerInvariant();
+             return $"OS: {os} Arch: {arch} FrameworkVersion: {FrameworkVersion}";
+         }
+ 
+         private static OSPlatform HostOS => RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? OSPlatform.Linux :
+-                                    RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? OSPlatform.OSX : OSPlatform.Windows;
++                                    RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? OSPlatform.OSX :
++                                    RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD) ? OSPlatform.FreeBSD : OSPlatform.Windows;
+ 
+         public bool IsLinux => OS.Equals(OSPlatform.Linux);
+         public bool IsOSX => OS.Equals(OSPlatform.OSX);
+         public bool IsWindows => OS.Equals(OSPlatform.Windows);
++        public bool IsFreeBSD => OS.Equals(OSPlatform.FreeBSD);
+ 
+         // The .net core 3 apphost doesn't care about semantics of FileType -- all files are extracted at startup.
+         // However, the apphost checks that the FileType value is within expected bounds, so set it to the first enumeration.
+@@ -112,8 +114,8 @@ public override string ToString()
+ 
+         private readonly Version net60 = new Version(6, 0);
+         private readonly Version net50 = new Version(5, 0);
+-        private string HostFxr => IsWindows ? "hostfxr.dll" : IsLinux ? "libhostfxr.so" : "libhostfxr.dylib";
+-        private string HostPolicy => IsWindows ? "hostpolicy.dll" : IsLinux ? "libhostpolicy.so" : "libhostpolicy.dylib";
++        private string HostFxr => IsWindows ? "hostfxr.dll" : (IsLinux || IsFreeBSD) ? "libhostfxr.so" : "libhostfxr.dylib";
++        private string HostPolicy => IsWindows ? "hostpolicy.dll" : (IsLinux || IsFreeBSD) ? "libhostpolicy.so" : "libhostpolicy.dylib";
+ 
+ 
+     }
+diff --git a/src/installer/managed/Microsoft.NET.HostModel/Microsoft.NET.HostModel.csproj b/src/installer/managed/Microsoft.NET.HostModel/Microsoft.NET.HostModel.csproj
+index 64ac366ee39..ff96b12b053 100644
+--- a/src/installer/managed/Microsoft.NET.HostModel/Microsoft.NET.HostModel.csproj
++++ b/src/installer/managed/Microsoft.NET.HostModel/Microsoft.NET.HostModel.csproj
+@@ -1,7 +1,7 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+ 
+   <PropertyGroup>
+-    <TargetFramework>netstandard2.0</TargetFramework>
++    <TargetFramework>netcoreapp3.1</TargetFramework>
+     <Description>Abstractions for modifying .NET host binaries</Description>
+     <IsShipping>false</IsShipping>
+     <IsPackable>true</IsPackable>
+diff --git a/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj b/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj
+index 4c3c0f82a1a..a4a442013c3 100644
+--- a/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj
++++ b/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj
+@@ -11,15 +11,17 @@
+     <ArchiveName>dotnet-crossgen2</ArchiveName>
+     <SharedFrameworkHostFileNameOverride>crossgen2</SharedFrameworkHostFileNameOverride>
+     <!-- Build this pack for any RID if building from source. Otherwise, only build select RIDs. -->
+-    <RuntimeIdentifiers Condition="'$(DotNetBuildFromSource)' != 'true'">linux-x64;linux-musl-x64;linux-arm;linux-musl-arm;linux-arm64;linux-musl-arm64;osx-x64;osx-arm64;win-x64;win-x86;win-arm64;win-arm</RuntimeIdentifiers>
++    <RuntimeIdentifiers Condition="'$(DotNetBuildFromSource)' != 'true'">linux-x64;linux-musl-x64;linux-arm;linux-musl-arm;linux-arm64;linux-musl-arm64;freebsd-x64;osx-x64;osx-arm64;win-x64;win-x86;win-arm64;win-arm</RuntimeIdentifiers>
+     <GenerateInstallers>false</GenerateInstallers>
+     <GetSharedFrameworkFilesForReadyToRunDependsOn>
+         AddRuntimeFilesToPackage;
+         AddFrameworkFilesToPackage
+     </GetSharedFrameworkFilesForReadyToRunDependsOn>
+     <PublishReadyToRun>true</PublishReadyToRun>
+-    <!-- Disable crossgen on FreeBSD, NetBSD, illumos and Solaris for now. This can be revisited when we have full support. -->
+-    <PublishReadyToRun Condition="'$(TargetOS)'=='FreeBSD' Or '$(TargetOS)'=='NetBSD' Or '$(TargetOS)'=='illumos' Or '$(TargetOS)'=='Solaris'">false</PublishReadyToRun>
++    <!-- Disable crossgen on NetBSD, illumos and Solaris for now. This can be revisited when we have full support. -->
++    <PublishReadyToRun Condition="'$(TargetOS)'=='NetBSD' Or '$(TargetOS)'=='illumos' Or '$(TargetOS)'=='Solaris'">false</PublishReadyToRun>
++    <!-- Disable crossgen on FreeBSD when cross building from Linux. -->
++    <PublishReadyToRun Condition="'$(TargetOS)'=='FreeBSD' and '$(CrossBuild)'=='true'">false</PublishReadyToRun>
+     <HostJsonTargetPath>tools/</HostJsonTargetPath>
+     <PermitDllAndExeFilesLackingFileVersion>true</PermitDllAndExeFilesLackingFileVersion>
+   </PropertyGroup>
+diff --git a/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Runtime.props b/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Runtime.props
+index 87aaf9d263c..a48efb37f56 100644
+--- a/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Runtime.props
++++ b/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Runtime.props
+@@ -7,8 +7,10 @@
+     </GetSharedFrameworkFilesForReadyToRunDependsOn>
+     <PublishReadyToRun Condition="'$(RuntimeFlavor)' != 'Mono'">true</PublishReadyToRun>
+     <PublishReadyToRun Condition="'$(RuntimeFlavor)' == 'Mono'">false</PublishReadyToRun>
+-    <!-- Disable crossgen on FreeBSD, NetBSD, illumos and Solaris for now. This can be revisited when we have full support. -->
+-    <PublishReadyToRun Condition="'$(TargetOS)'=='FreeBSD' Or '$(TargetOS)'=='NetBSD' Or '$(TargetOS)'=='illumos' Or '$(TargetOS)'=='Solaris'">false</PublishReadyToRun>
++    <!-- Disable crossgen on NetBSD, illumos and Solaris for now. This can be revisited when we have full support. -->
++    <PublishReadyToRun Condition="'$(TargetOS)'=='NetBSD' Or '$(TargetOS)'=='illumos' Or '$(TargetOS)'=='Solaris'">false</PublishReadyToRun>
++    <!-- Disable crossgen on FreeBSD when cross building from Linux. -->
++    <PublishReadyToRun Condition="'$(TargetOS)'=='FreeBSD' and '$(CrossBuild)'=='true'">false</PublishReadyToRun>
+     <!-- These components are installed by the root shared framework, but not others. -->
+     <IncludeWerRelatedKeys>true</IncludeWerRelatedKeys>
+     <IncludeBreadcrumbStoreFolder>true</IncludeBreadcrumbStoreFolder>
+diff --git a/src/installer/tests/Microsoft.NET.HostModel.Tests/Helpers/BundleHelper.cs b/src/installer/tests/Microsoft.NET.HostModel.Tests/Helpers/BundleHelper.cs
+index 351461e3a17..c747d6e6d8f 100644
+--- a/src/installer/tests/Microsoft.NET.HostModel.Tests/Helpers/BundleHelper.cs
++++ b/src/installer/tests/Microsoft.NET.HostModel.Tests/Helpers/BundleHelper.cs
+@@ -129,6 +129,7 @@ public static OSPlatform GetTargetOS(string runtimeIdentifier)
+                 "win" => OSPlatform.Windows,
+                 "osx" => OSPlatform.OSX,
+                 "linux" => OSPlatform.Linux,
++                "freebsd" => OSPlatform.FreeBSD,
+                 _ => throw new ArgumentException(nameof(runtimeIdentifier))
+             };
+         }
+diff --git a/src/libraries/Common/src/Interop/FreeBSD/Interop.Process.GetProcInfo.cs b/src/libraries/Common/src/Interop/FreeBSD/Interop.Process.GetProcInfo.cs
+index bc1920c0156..09f7c97d302 100644
+--- a/src/libraries/Common/src/Interop/FreeBSD/Interop.Process.GetProcInfo.cs
++++ b/src/libraries/Common/src/Interop/FreeBSD/Interop.Process.GetProcInfo.cs
+@@ -2,6 +2,7 @@
+ // The .NET Foundation licenses this file to you under the MIT license.
+ 
+ using System;
++using System.Diagnostics;
+ using System.Runtime.InteropServices;
+ 
+ #pragma warning disable CA1823 // analyzer incorrectly flags fixed buffer length const (https://github.com/dotnet/roslyn/issues/37593)
+@@ -186,11 +187,6 @@ public unsafe struct kinfo_proc
+         public static unsafe kinfo_proc* GetProcInfo(int pid, bool threads, out int count)
+         {
+             Span<int> sysctlName = stackalloc int[4];
+-            int bytesLength = 0;
+-            byte* pBuffer = null;
+-            kinfo_proc* kinfo = null;
+-
+-            count = -1;
+ 
+             if (pid == 0)
+             {
+@@ -207,23 +203,17 @@ public unsafe struct kinfo_proc
+             sysctlName[1] = KERN_PROC;
+             sysctlName[0] = CTL_KERN;
+ 
+-            try
+-            {
+-                Interop.Sys.Sysctl(sysctlName, ref pBuffer, ref bytesLength);
+-                kinfo = (kinfo_proc*)pBuffer;
+-                if (kinfo->ki_structsize != sizeof(kinfo_proc))
+-                {
+-                    // failed consistency check
+-                    throw new ArgumentOutOfRangeException(nameof(pid));
+-                }
+-
+-                count = (int)bytesLength / sizeof(kinfo_proc);
+-            }
+-            finally
+-            {
+-                Marshal.FreeHGlobal((IntPtr)pBuffer);
+-            }
++            byte* pBuffer = null;
++            int bytesLength = 0;
++            Interop.Sys.Sysctl(sysctlName, ref pBuffer, ref bytesLength);
++
++            kinfo_proc* kinfo = (kinfo_proc*)pBuffer;
++
++            Debug.Assert(kinfo->ki_structsize == sizeof(kinfo_proc));
++
++            count = (int)bytesLength / sizeof(kinfo_proc);
+ 
++            // Buffer ownership transferred to the caller
+             return kinfo;
+         }
+     }
+diff --git a/src/libraries/Common/src/Interop/FreeBSD/Interop.Process.cs b/src/libraries/Common/src/Interop/FreeBSD/Interop.Process.cs
+index 031f56a50f0..3d18ead32d1 100644
+--- a/src/libraries/Common/src/Interop/FreeBSD/Interop.Process.cs
++++ b/src/libraries/Common/src/Interop/FreeBSD/Interop.Process.cs
+@@ -65,7 +65,7 @@ internal static unsafe int[] ListAllPids()
+             }
+             finally
+             {
+-                Marshal.FreeHGlobal((IntPtr)entries);
++                NativeMemory.Free(entries);
+             }
+         }
+ 
+@@ -87,7 +87,7 @@ internal static unsafe int[] ListAllPids()
+             }
+             finally
+             {
+-                Marshal.FreeHGlobal((IntPtr)pBuffer);
++                NativeMemory.Free(pBuffer);
+             }
+         }
+ 
+@@ -107,9 +107,9 @@ public static unsafe ProcessInfo GetProcessInfoById(int pid)
+                 throw new ArgumentOutOfRangeException(nameof(pid));
+             }
+ 
+-            kinfo_proc* kinfo = GetProcInfo(pid, true, out int count);
+             ProcessInfo info;
+ 
++            kinfo_proc* kinfo = GetProcInfo(pid, true, out int count);
+             try
+             {
+                 if (count < 1)
+@@ -142,7 +142,7 @@ public static unsafe ProcessInfo GetProcessInfoById(int pid)
+             }
+             finally
+             {
+-                Marshal.FreeHGlobal((IntPtr)kinfo);
++                NativeMemory.Free(kinfo);
+             }
+ 
+             return info;
+@@ -160,12 +160,11 @@ public static unsafe ProcessInfo GetProcessInfoById(int pid)
+         public static unsafe proc_stats GetThreadInfo(int pid, int tid)
+         {
+             proc_stats ret = default;
+-            kinfo_proc* info = null;
+             int count;
+ 
++            kinfo_proc* info = GetProcInfo(pid, (tid != 0), out count);
+             try
+             {
+-                info = GetProcInfo(pid, (tid != 0), out count);
+                 if (info != null && count >= 1)
+                 {
+                     if (tid == 0)
+@@ -194,7 +193,7 @@ public static unsafe proc_stats GetThreadInfo(int pid, int tid)
+             }
+             finally
+             {
+-                Marshal.FreeHGlobal((IntPtr)info);
++                NativeMemory.Free(info);
+             }
+ 
+             return ret;
+diff --git a/src/libraries/Native/Unix/System.Native/extra_libs.cmake b/src/libraries/Native/Unix/System.Native/extra_libs.cmake
+index 74efbf803ae..2edc74bde7a 100644
+--- a/src/libraries/Native/Unix/System.Native/extra_libs.cmake
++++ b/src/libraries/Native/Unix/System.Native/extra_libs.cmake
+@@ -4,7 +4,7 @@ macro(append_extra_system_libs NativeLibsExtra)
+         list(APPEND ${NativeLibsExtra} rt)
+     elseif (CLR_CMAKE_TARGET_FREEBSD)
+         list(APPEND ${NativeLibsExtra} pthread)
+-        find_library(INOTIFY_LIBRARY inotify HINTS /usr/local/lib)
++        find_library(INOTIFY_LIBRARY inotify HINTS ${CROSS_ROOTFS}/usr/local/lib)
+         list(APPEND ${NativeLibsExtra} ${INOTIFY_LIBRARY})
+     elseif (CLR_CMAKE_TARGET_SUNOS)
+         list(APPEND ${NativeLibsExtra} socket)
+diff --git a/src/libraries/Native/Unix/configure.cmake b/src/libraries/Native/Unix/configure.cmake
+index e1afadb0e52..1038d1b4c1f 100644
+--- a/src/libraries/Native/Unix/configure.cmake
++++ b/src/libraries/Native/Unix/configure.cmake
+@@ -985,7 +985,7 @@ set (CMAKE_REQUIRED_FLAGS ${PREVIOUS_CMAKE_REQUIRED_FLAGS})
+ 
+ set (PREVIOUS_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+ if (HAVE_SYS_INOTIFY_H AND CLR_CMAKE_TARGET_FREEBSD)
+-    set (CMAKE_REQUIRED_LIBRARIES "-linotify -L/usr/local/lib")
++    set (CMAKE_REQUIRED_LIBRARIES "-linotify -L${CROSS_ROOTFS}/usr/local/lib")
+ endif()
+ 
+ check_symbol_exists(
+diff --git a/src/libraries/System.Private.CoreLib/src/System/Environment.FreeBSD.cs b/src/libraries/System.Private.CoreLib/src/System/Environment.FreeBSD.cs
+index e9e9178510e..aa568ef7822 100644
+--- a/src/libraries/System.Private.CoreLib/src/System/Environment.FreeBSD.cs
++++ b/src/libraries/System.Private.CoreLib/src/System/Environment.FreeBSD.cs
+@@ -7,6 +7,20 @@ namespace System
+ {
+     public static partial class Environment
+     {
+-        public static unsafe long WorkingSet => Interop.Process.GetProcInfo(ProcessId, true, out _)->ki_rssize;
++        public static unsafe long WorkingSet
++        {
++            get
++            {
++                Interop.Process.kinfo_proc* processInfo = Interop.Process.GetProcInfo(ProcessId, true, out _);
++                try
++                {
++                    return processInfo->ki_rssize;
++                }
++                finally
++                {
++                    NativeMemory.Free(processInfo);
++                }
++            }
++        }
+     }
+ }
+diff --git a/src/mono/CMakeLists.txt b/src/mono/CMakeLists.txt
+index bbd8de5308a..3da1aa83bb3 100644
+--- a/src/mono/CMakeLists.txt
++++ b/src/mono/CMakeLists.txt
+@@ -259,6 +259,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+ elseif(CMAKE_SYSTEM_NAME STREQUAL "SunOS")
+   set(HOST_SOLARIS 1)
+   add_definitions(-DGC_SOLARIS_THREADS -DGC_SOLARIS_PTHREADS -D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS -DUSE_MMAP -DUSE_MUNMAP -DHOST_SOLARIS -D__EXTENSIONS__ -D_XPG4_2)
++elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
++  set(HOST_FREEBSD 1)
+ else()
+   message(FATAL_ERROR "Host '${CMAKE_SYSTEM_NAME}' not supported.")
+ endif()
+@@ -299,6 +301,8 @@ elseif(TARGET_SYSTEM_NAME STREQUAL "Windows")
+   set(TARGET_WIN32 1)
+ elseif(TARGET_SYSTEM_NAME STREQUAL "SunOS")
+   set(TARGET_SOLARIS 1)
++elseif(TARGET_SYSTEM_NAME STREQUAL "FreeBSD")
++   set(TARGET_SOLARIS 1)
+ else()
+   message(FATAL_ERROR "Target '${TARGET_SYSTEM_NAME}' not supported.")
+ endif()
+@@ -327,7 +331,7 @@ elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "i686" OR CMAKE_SYSTEM_PROCESSOR STREQUAL
+   set(CMAKE_SYSTEM_PROCESSOR "x86")
+ elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "ARM64")
+   set(CMAKE_SYSTEM_PROCESSOR "arm64")
+-elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x64")
++elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x64")
+   set(CMAKE_SYSTEM_PROCESSOR "x86_64")
+ endif()
+ 
+@@ -601,6 +605,12 @@ elseif(HOST_WIN32)
+ elseif(HOST_SOLARIS)
+   set(ICU_FLAGS "-DPALEXPORT=\"\" -DTARGET_UNIX -Wno-reserved-id-macro -Wno-documentation -Wno-documentation-unknown-command -Wno-switch-enum -Wno-covered-switch-default -Wno-extra-semi-stmt -Wno-unknown-warning-option")
+   set(HAVE_SYS_ICU 1)
++elseif(HOST_FREEBSD)
++  set(ICU_FLAGS "-DTARGET_UNIX -Wno-deprecated-declarations")
++  set(HAVE_SYS_ICU 1)
++  set(ICU_LIBS icuuc icui18n)
++  set(ICU_INCLUDEDIR "${CROSS_ROOTFS}/usr/local/include")
++  set(ICU_LIBDIR "${CROSS_ROOTFS}/usr/local/lib")
+ else()
+   message(FATAL_ERROR "Unknown host")
+ endif()
+@@ -625,6 +635,8 @@ elseif(GC_SUSPEND STREQUAL "default")
+   else()
+     set(ENABLE_HYBRID_SUSPEND 1)
+   endif()
++elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
++  set(HOST_FREEBSD 1)
+ else()
+   message(FATAL_ERROR "GC_SUSPEND (set to '${GC_SUSPEND}') must be one of coop, hybrid or preemptive")
+ endif()
+diff --git a/src/mono/cmake/configure.cmake b/src/mono/cmake/configure.cmake
+index b3d3f47c894..438e71783cc 100644
+--- a/src/mono/cmake/configure.cmake
++++ b/src/mono/cmake/configure.cmake
+@@ -175,3 +175,9 @@ if(HOST_SOLARIS)
+   set(HAVE_NETINET_TCP_H 1)
+   set(HAVE_GETADDRINFO 1)
+ endif()
++
++if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
++  # FreeBSD fails earlier ac_check_headers for these because <sys/types.h> is needed.
++  set(HAVE_SYS_SYSCTL_H 1)
++  set(HAVE_SYS_USER_H 1)
++endif()
+diff --git a/src/mono/cmake/eglib-config.h.cmake.in b/src/mono/cmake/eglib-config.h.cmake.in
+index 9f1394e134b..ac061852d61 100644
+--- a/src/mono/cmake/eglib-config.h.cmake.in
++++ b/src/mono/cmake/eglib-config.h.cmake.in
+@@ -33,7 +33,7 @@
+ 
+ #else
+ 
+-#if @HAVE_ALLOCA_H@ == 1
++#ifdef HAVE_ALLOCA_H
+ #define G_HAVE_ALLOCA_H
+ #endif
+ 
+diff --git a/src/mono/mono.proj b/src/mono/mono.proj
+index c4bd405f0e6..0fe97a31abb 100644
+--- a/src/mono/mono.proj
++++ b/src/mono/mono.proj
+@@ -245,6 +245,12 @@
+       <_MonoBuildEnv Include="PKG_CONFIG_PATH=$(MonoCrossDir)/usr/lib/s390x-linux-gnu/pkgconfig" />
+     </ItemGroup>
+ 
++    <!-- x64 FreeBSD cross build options -->
++    <ItemGroup Condition="'$(TargetsFreeBSD)' == 'true' and '$(MonoCrossDir)' != ''">
++      <_MonoCMakeArgs Include="-DCMAKE_TOOLCHAIN_FILE=$([MSBuild]::NormalizePath('$(RepositoryEngineeringDir)', 'common', 'cross', 'toolchain.cmake'))" />
++      <_MonoBuildEnv Include="TARGET_BUILD_ARCH=x64" />
++    </ItemGroup>
++
+     <!-- Windows specific options -->
+     <ItemGroup Condition="'$(TargetsWindows)' == 'true'">
+       <_MonoCPPFLAGS Include="-DWIN32" />
+diff --git a/src/mono/mono/mini/CMakeLists.txt b/src/mono/mono/mini/CMakeLists.txt
+index 1760e0982cc..41ba50d4fae 100644
+--- a/src/mono/mono/mini/CMakeLists.txt
++++ b/src/mono/mono/mini/CMakeLists.txt
+@@ -35,6 +35,8 @@ elseif(HOST_WIN32)
+ set(OS_LIBS bcrypt.lib Mswsock.lib ws2_32.lib psapi.lib version.lib advapi32.lib winmm.lib kernel32.lib)
+ elseif(HOST_SOLARIS)
+   set(OS_LIBS socket pthread m ${CMAKE_DL_LIBS})
++elseif(HOST_FREEBSD)
++  set(OS_LIBS pthread m)
+ endif()
+ 
+ #
+@@ -254,7 +256,7 @@ set(posix_sources
+ 
+ if(HOST_DARWIN)
+ set(os_sources "${darwin_sources};${posix_sources}")
+-elseif(HOST_LINUX OR HOST_SOLARIS)
++elseif(HOST_LINUX OR HOST_SOLARIS OR HOST_FREEBSD)
+ set(os_sources "${posix_sources}")
+ elseif(HOST_WIN32)
+ set(os_sources "${windows_sources}")
+diff --git a/src/native/eventpipe/ds-ipc-pal-socket.c b/src/native/eventpipe/ds-ipc-pal-socket.c
+index 2f7cb928706..3bef647b5f1 100644
+--- a/src/native/eventpipe/ds-ipc-pal-socket.c
++++ b/src/native/eventpipe/ds-ipc-pal-socket.c
+@@ -289,7 +289,7 @@ inline
+ ds_ipc_mode_t
+ ipc_socket_set_default_umask (void)
+ {
+-#if defined(DS_IPC_PAL_AF_UNIX) && defined(__APPLE__)
++#if defined(DS_IPC_PAL_AF_UNIX) && (defined(__APPLE__) || defined(__FREEBSD__))
+ 	// This will set the default permission bit to 600
+ 	return umask (~(S_IRUSR | S_IWUSR));
+ #else
+@@ -302,7 +302,7 @@ inline
+ void
+ ipc_socket_reset_umask (ds_ipc_mode_t mode)
+ {
+-#if defined(DS_IPC_PAL_AF_UNIX) && defined(__APPLE__)
++#if defined(DS_IPC_PAL_AF_UNIX) && (defined(__APPLE__) || defined(__FREEBSD__))
+ 	umask (mode);
+ #endif
+ }
+@@ -412,7 +412,7 @@ inline
+ int
+ ipc_socket_set_permission (ds_ipc_socket_t s)
+ {
+-#if defined(DS_IPC_PAL_AF_UNIX) && !defined(__APPLE__)
++#if defined(DS_IPC_PAL_AF_UNIX) && (!defined(__APPLE__) || !defined(__FREEBSD__))
+ 	int result_fchmod;
+ 	DS_ENTER_BLOCKING_PAL_SECTION;
+ 	do {
+diff --git a/src/tests/Common/CoreCLRTestLibrary/Utilities.cs b/src/tests/Common/CoreCLRTestLibrary/Utilities.cs
+index bd1eb1be37d..8e4060fec10 100644
+--- a/src/tests/Common/CoreCLRTestLibrary/Utilities.cs
++++ b/src/tests/Common/CoreCLRTestLibrary/Utilities.cs
+@@ -65,6 +65,7 @@ public static bool Verbose
+         public static bool IsWindows => OperatingSystem.IsWindows();
+         public static bool IsLinux => OperatingSystem.IsLinux();
+         public static bool IsMacOSX => OperatingSystem.IsMacOS();
++        public static bool IsFreeBSD => OperatingSystem.IsFreeBSD();
+         public static bool IsWindows7 => IsWindows && Environment.OSVersion.Version.Major == 6 && Environment.OSVersion.Version.Minor == 1;
+         public static bool IsWindowsNanoServer => (!IsWindowsIoTCore && GetInstallationType().Equals("Nano Server", StringComparison.OrdinalIgnoreCase));
+ 
+diff --git a/src/tests/Interop/NativeLibrary/NativeLibraryToLoad/NativeLibraryToLoad.cs b/src/tests/Interop/NativeLibrary/NativeLibraryToLoad/NativeLibraryToLoad.cs
+index 4a61c599961..dc63033588f 100644
+--- a/src/tests/Interop/NativeLibrary/NativeLibraryToLoad/NativeLibraryToLoad.cs
++++ b/src/tests/Interop/NativeLibrary/NativeLibraryToLoad/NativeLibraryToLoad.cs
+@@ -22,6 +22,9 @@ public static string GetFileName()
+         if (OperatingSystem.IsMacOS())
+             return $"lib{Name}.dylib";
+ 
++        if (OperatingSystem.IsFreeBSD())
++             return $"lib{Name}.so";
++
+         throw new PlatformNotSupportedException();
+     }
+ 
+diff --git a/src/tests/JIT/superpmi/superpmicollect.cs b/src/tests/JIT/superpmi/superpmicollect.cs
+index d00272b441c..a0389a73861 100644
+--- a/src/tests/JIT/superpmi/superpmicollect.cs
++++ b/src/tests/JIT/superpmi/superpmicollect.cs
+@@ -34,6 +34,7 @@ internal class Global
+         internal static bool IsWindows { get; private set; }
+         internal static bool IsOSX { get; private set; }
+         internal static bool IsLinux { get; private set; }
++        internal static bool IsFreeBSD { get; private set; }
+ 
+         internal static string CoreRoot { get; private set; }
+         internal static string StandaloneJitName { get; private set; }
+@@ -66,6 +67,7 @@ public static void Initialize()
+             IsWindows = OperatingSystem.IsWindows();
+             IsOSX     = OperatingSystem.IsMacOS();
+             IsLinux   = OperatingSystem.IsLinux();
++            IsFreeBSD = OperatingSystem.IsFreeBSD();
+ 
+             if (IsWindows)
+             {
+@@ -88,6 +90,13 @@ public static void Initialize()
+                 SuperPmiToolName  = "superpmi";
+                 McsToolName       = "mcs";
+             }
++            else if (IsFreeBSD)
++            {
++                StandaloneJitName = "libclrjit.so";
++                CollectorShimName = "libsuperpmi-shim-collector.so";
++                SuperPmiToolName  = "superpmi";
++                McsToolName       = "mcs";
++            }
+             else
+             {
+                 throw new SpmiException("Unknown platform");
+diff --git a/src/tests/tracing/eventpipe/processinfo/processinfo.cs b/src/tests/tracing/eventpipe/processinfo/processinfo.cs
+index f6cbb2117c3..7db74a25710 100644
+--- a/src/tests/tracing/eventpipe/processinfo/processinfo.cs
++++ b/src/tests/tracing/eventpipe/processinfo/processinfo.cs
+@@ -178,6 +178,10 @@ public static int Main(string[] args)
+             {
+                 expectedOSValue = "Linux";
+             }
++            else if (OperatingSystem.IsFreeBSD())
++            {
++                expectedOSValue = "FreeBSD";
++            }
+             else
+             {
+                 expectedOSValue = "Unknown";
+@@ -217,4 +221,4 @@ public static int Main(string[] args)
+             return 100;
+         }
+     }
+-}
+\ No newline at end of file
++}
