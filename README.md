@@ -20,6 +20,10 @@ run as root/sudo:
 
 ## How do I use the output?
 
+For just running it please look here:
+
+- https://github.com/dotnet/runtime/blob/main/docs/workflow/requirements/freebsd-requirements.md#running-on-freebsd
+
 For building code, you will need:
 
 - either the tarball or zip from `./installer/artifacts/packages/Release/Shipping/`
