@@ -21,11 +21,24 @@ index ec8971eb019..8f0ade33a35 100644
      set(CMAKE_SYSROOT "${CROSS_ROOTFS}")
  elseif(ILLUMOS)
      set(CMAKE_SYSROOT "${CROSS_ROOTFS}")
+diff --git a/eng/native/gen-buildsys.sh b/eng/native/gen-buildsys.sh
+index bf04c26f2b1..3e0770c4f4c 100755
+--- a/eng/native/gen-buildsys.sh
++++ b/eng/native/gen-buildsys.sh
+@@ -97,7 +97,7 @@ if [[ "$build_arch" == "wasm" ]]; then
+     cmake_command="emcmake $cmake_command"
+ fi
+ 
+-cmake_args_to_cache="$scan_build\n$SCAN_BUILD_COMMAND\n$generator\n$__UnprocessedCMakeArgs"
++cmake_args_to_cache=$(printf "$scan_build\t$SCAN_BUILD_COMMAND\n$generator\n$__UnprocessedCMakeArgs")
+ cmake_args_cache_file="$2/cmake_cmd_line.txt"
+ if [[ -z "$__ConfigureOnly" ]]; then
+     if [[ -e "$cmake_args_cache_file" ]]; then
 diff --git a/eng/pipelines/common/platform-matrix.yml b/eng/pipelines/common/platform-matrix.yml
-index 15fe948e929..bc8803b8487 100644
+index fbc12a81b5a..b91d7b50bb1 100644
 --- a/eng/pipelines/common/platform-matrix.yml
 +++ b/eng/pipelines/common/platform-matrix.yml
-@@ -262,7 +262,7 @@ jobs:
+@@ -288,7 +288,7 @@ jobs:
        targetRid: freebsd-x64
        platform: FreeBSD_x64
        container:
@@ -34,8 +47,21 @@ index 15fe948e929..bc8803b8487 100644
          registry: mcr
        jobParameters:
          runtimeFlavor: ${{ parameters.runtimeFlavor }}
+diff --git a/src/coreclr/pal/tools/gen-dactable-rva.sh b/src/coreclr/pal/tools/gen-dactable-rva.sh
+index 0f3ce0a0866..01ff6d5139d 100755
+--- a/src/coreclr/pal/tools/gen-dactable-rva.sh
++++ b/src/coreclr/pal/tools/gen-dactable-rva.sh
+@@ -15,7 +15,7 @@ while read -r line; do
+     # * longer than 16, capture last 16 characters.
+     #
+     array=($line)
+-    value="$(printf "%016s\n" ${array[2]:(${#array[2]} > 16 ? -16 : 0)})"
++    value="$(printf "%016x\n" ${array[2]:(${#array[2]} > 16 ? -16 : 0)})"
+ 
+     # Write line to file and exit
+     printf "#define DAC_TABLE_RVA 0x%s\n" "$value" > "$2"
 diff --git a/src/coreclr/tools/aot/crossgen2/Program.cs b/src/coreclr/tools/aot/crossgen2/Program.cs
-index afae84f57f6..8c9c0045309 100644
+index e9eb59289f8..e576d851517 100644
 --- a/src/coreclr/tools/aot/crossgen2/Program.cs
 +++ b/src/coreclr/tools/aot/crossgen2/Program.cs
 @@ -54,6 +54,8 @@ public static void ComputeDefaultOptions(out TargetOS os, out TargetArchitecture
@@ -47,7 +73,7 @@ index afae84f57f6..8c9c0045309 100644
              else
                  throw new NotImplementedException();
  
-@@ -209,6 +211,8 @@ private void ConfigureTarget()
+@@ -210,6 +212,8 @@ private void ConfigureTarget()
                      _targetOS = TargetOS.Linux;
                  else if (_commandLineOptions.TargetOS.Equals("osx", StringComparison.OrdinalIgnoreCase))
                      _targetOS = TargetOS.OSX;
@@ -315,10 +341,10 @@ index 74efbf803ae..2edc74bde7a 100644
      elseif (CLR_CMAKE_TARGET_SUNOS)
          list(APPEND ${NativeLibsExtra} socket)
 diff --git a/src/libraries/Native/Unix/configure.cmake b/src/libraries/Native/Unix/configure.cmake
-index e1afadb0e52..1038d1b4c1f 100644
+index e00b35d0f9e..4302123ee33 100644
 --- a/src/libraries/Native/Unix/configure.cmake
 +++ b/src/libraries/Native/Unix/configure.cmake
-@@ -985,7 +985,7 @@ set (CMAKE_REQUIRED_FLAGS ${PREVIOUS_CMAKE_REQUIRED_FLAGS})
+@@ -997,7 +997,7 @@ set (CMAKE_REQUIRED_FLAGS ${PREVIOUS_CMAKE_REQUIRED_FLAGS})
  
  set (PREVIOUS_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
  if (HAVE_SYS_INOTIFY_H AND CLR_CMAKE_TARGET_FREEBSD)
@@ -354,10 +380,10 @@ index e9e9178510e..aa568ef7822 100644
      }
  }
 diff --git a/src/mono/CMakeLists.txt b/src/mono/CMakeLists.txt
-index bbd8de5308a..3da1aa83bb3 100644
+index 49a73b1b709..b1e1596b997 100644
 --- a/src/mono/CMakeLists.txt
 +++ b/src/mono/CMakeLists.txt
-@@ -259,6 +259,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+@@ -263,6 +263,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
  elseif(CMAKE_SYSTEM_NAME STREQUAL "SunOS")
    set(HOST_SOLARIS 1)
    add_definitions(-DGC_SOLARIS_THREADS -DGC_SOLARIS_PTHREADS -D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS -DUSE_MMAP -DUSE_MUNMAP -DHOST_SOLARIS -D__EXTENSIONS__ -D_XPG4_2)
@@ -366,7 +392,7 @@ index bbd8de5308a..3da1aa83bb3 100644
  else()
    message(FATAL_ERROR "Host '${CMAKE_SYSTEM_NAME}' not supported.")
  endif()
-@@ -299,6 +301,8 @@ elseif(TARGET_SYSTEM_NAME STREQUAL "Windows")
+@@ -303,6 +305,8 @@ elseif(TARGET_SYSTEM_NAME STREQUAL "Windows")
    set(TARGET_WIN32 1)
  elseif(TARGET_SYSTEM_NAME STREQUAL "SunOS")
    set(TARGET_SOLARIS 1)
@@ -375,7 +401,7 @@ index bbd8de5308a..3da1aa83bb3 100644
  else()
    message(FATAL_ERROR "Target '${TARGET_SYSTEM_NAME}' not supported.")
  endif()
-@@ -327,7 +331,7 @@ elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "i686" OR CMAKE_SYSTEM_PROCESSOR STREQUAL
+@@ -331,7 +335,7 @@ elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "i686" OR CMAKE_SYSTEM_PROCESSOR STREQUAL
    set(CMAKE_SYSTEM_PROCESSOR "x86")
  elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "ARM64")
    set(CMAKE_SYSTEM_PROCESSOR "arm64")
@@ -384,7 +410,7 @@ index bbd8de5308a..3da1aa83bb3 100644
    set(CMAKE_SYSTEM_PROCESSOR "x86_64")
  endif()
  
-@@ -601,6 +605,12 @@ elseif(HOST_WIN32)
+@@ -605,6 +609,12 @@ elseif(HOST_WIN32)
  elseif(HOST_SOLARIS)
    set(ICU_FLAGS "-DPALEXPORT=\"\" -DTARGET_UNIX -Wno-reserved-id-macro -Wno-documentation -Wno-documentation-unknown-command -Wno-switch-enum -Wno-covered-switch-default -Wno-extra-semi-stmt -Wno-unknown-warning-option")
    set(HAVE_SYS_ICU 1)
@@ -397,7 +423,7 @@ index bbd8de5308a..3da1aa83bb3 100644
  else()
    message(FATAL_ERROR "Unknown host")
  endif()
-@@ -625,6 +635,8 @@ elseif(GC_SUSPEND STREQUAL "default")
+@@ -629,6 +639,8 @@ elseif(GC_SUSPEND STREQUAL "default")
    else()
      set(ENABLE_HYBRID_SUSPEND 1)
    endif()
@@ -407,10 +433,10 @@ index bbd8de5308a..3da1aa83bb3 100644
    message(FATAL_ERROR "GC_SUSPEND (set to '${GC_SUSPEND}') must be one of coop, hybrid or preemptive")
  endif()
 diff --git a/src/mono/cmake/configure.cmake b/src/mono/cmake/configure.cmake
-index b3d3f47c894..438e71783cc 100644
+index d27fc520120..7a560b4a530 100644
 --- a/src/mono/cmake/configure.cmake
 +++ b/src/mono/cmake/configure.cmake
-@@ -175,3 +175,9 @@ if(HOST_SOLARIS)
+@@ -191,3 +191,9 @@ if(HOST_SOLARIS)
    set(HAVE_NETINET_TCP_H 1)
    set(HAVE_GETADDRINFO 1)
  endif()
@@ -434,7 +460,7 @@ index 9f1394e134b..ac061852d61 100644
  #endif
  
 diff --git a/src/mono/mono.proj b/src/mono/mono.proj
-index c4bd405f0e6..0fe97a31abb 100644
+index fb98ffc1896..b97ba2de8a9 100644
 --- a/src/mono/mono.proj
 +++ b/src/mono/mono.proj
 @@ -245,6 +245,12 @@
@@ -451,7 +477,7 @@ index c4bd405f0e6..0fe97a31abb 100644
      <ItemGroup Condition="'$(TargetsWindows)' == 'true'">
        <_MonoCPPFLAGS Include="-DWIN32" />
 diff --git a/src/mono/mono/mini/CMakeLists.txt b/src/mono/mono/mini/CMakeLists.txt
-index 1760e0982cc..41ba50d4fae 100644
+index 54a5e44096a..cb3b6a0f953 100644
 --- a/src/mono/mono/mini/CMakeLists.txt
 +++ b/src/mono/mono/mini/CMakeLists.txt
 @@ -35,6 +35,8 @@ elseif(HOST_WIN32)
@@ -463,7 +489,7 @@ index 1760e0982cc..41ba50d4fae 100644
  endif()
  
  #
-@@ -254,7 +256,7 @@ set(posix_sources
+@@ -256,7 +258,7 @@ set(posix_sources
  
  if(HOST_DARWIN)
  set(os_sources "${darwin_sources};${posix_sources}")
