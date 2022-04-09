@@ -22,7 +22,7 @@ index ec8971eb019..8f0ade33a35 100644
  elseif(ILLUMOS)
      set(CMAKE_SYSROOT "${CROSS_ROOTFS}")
 diff --git a/eng/native/gen-buildsys.sh b/eng/native/gen-buildsys.sh
-index bf04c26f2b1..3e0770c4f4c 100755
+index bf04c26f2b1..7d8793dd92c 100755
 --- a/eng/native/gen-buildsys.sh
 +++ b/eng/native/gen-buildsys.sh
 @@ -97,7 +97,7 @@ if [[ "$build_arch" == "wasm" ]]; then
@@ -30,7 +30,7 @@ index bf04c26f2b1..3e0770c4f4c 100755
  fi
  
 -cmake_args_to_cache="$scan_build\n$SCAN_BUILD_COMMAND\n$generator\n$__UnprocessedCMakeArgs"
-+cmake_args_to_cache=$(printf "$scan_build\t$SCAN_BUILD_COMMAND\n$generator\n$__UnprocessedCMakeArgs")
++cmake_args_to_cache=$(printf "$scan_build${SCAN_BUILD_COMMAND:+ }${SCAN_BUILD_COMMAND} $generator $__UnprocessedCMakeArgs")
  cmake_args_cache_file="$2/cmake_cmd_line.txt"
  if [[ -z "$__ConfigureOnly" ]]; then
      if [[ -e "$cmake_args_cache_file" ]]; then
