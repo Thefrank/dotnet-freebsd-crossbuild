@@ -18,3 +18,81 @@ index 3c179c39ae..10318f938c 100644
    </ItemGroup>
  
    <ItemGroup Label=".NET team dependencies (Non-source-build)" Condition="'$(DotNetBuildFromSource)' != 'true'">
+diff --git a/src/Components/Web.JS/src/webpack.config.js b/src/Components/Web.JS/src/webpack.config.js
+index b0651fa75..ff7f556b6 100644
+--- a/src/Components/Web.JS/src/webpack.config.js
++++ b/src/Components/Web.JS/src/webpack.config.js
+@@ -19,6 +19,7 @@ module.exports = (env, args) => ({
+     output: { path: path.join(__dirname, '/..', '/dist', args.mode == 'development' ? '/Debug' : '/Release'), filename: '[name].js' },
+     performance: {
+         maxAssetSize: 122880,
++        hints: false,
+     },
+     optimization: {
+         sideEffects: true,
+diff --git a/src/Components/WebAssembly/Authentication.Msal/src/Interop/webpack.config.js b/src/Components/WebAssembly/Authentication.Msal/src/Interop/webpack.config.js
+index b9926fcf3..5f135d3c4 100644
+--- a/src/Components/WebAssembly/Authentication.Msal/src/Interop/webpack.config.js
++++ b/src/Components/WebAssembly/Authentication.Msal/src/Interop/webpack.config.js
+@@ -17,6 +17,7 @@ module.exports = (env, args) => ({
+     output: { path: path.join(__dirname, 'dist', args.mode == 'development' ? 'Debug' : 'Release'), filename: '[name].js' },
+     performance: {
+         maxAssetSize: 122880,
++        hints: false,
+     },
+     optimization: {
+         sideEffects: true,
+diff --git a/src/Components/WebAssembly/WebAssembly.Authentication/src/Interop/webpack.config.js b/src/Components/WebAssembly/WebAssembly.Authentication/src/Interop/webpack.config.js
+index 896ccc8a0..67b85e432 100644
+--- a/src/Components/WebAssembly/WebAssembly.Authentication/src/Interop/webpack.config.js
++++ b/src/Components/WebAssembly/WebAssembly.Authentication/src/Interop/webpack.config.js
+@@ -17,6 +17,7 @@ module.exports = (env, args) => ({
+     output: { path: path.join(__dirname, 'dist', args.mode == 'development' ? 'Debug' : 'Release'), filename: '[name].js' },
+     performance: {
+         maxAssetSize: 122880,
++        hints: false,
+     },
+     optimization: {
+         sideEffects: true,
+diff --git a/src/SignalR/clients/ts/FunctionalTests/webpack.config.js b/src/SignalR/clients/ts/FunctionalTests/webpack.config.js
+index 28830064f..81f3dc826 100644
+--- a/src/SignalR/clients/ts/FunctionalTests/webpack.config.js
++++ b/src/SignalR/clients/ts/FunctionalTests/webpack.config.js
+@@ -7,6 +7,9 @@ module.exports = {
+     entry: path.resolve(__dirname, "ts", "index.ts"),
+     mode: "none",
+     devtool: "source-map",
++    performance: {
++        hints: false,
++    },
+     module: {
+         rules: [
+             {
+@@ -43,4 +46,4 @@ module.exports = {
+         "@microsoft/signalr": "signalR",
+         "@microsoft/signalr-protocol-msgpack": "signalR.protocols.msgpack",
+     },
+-};
+\ No newline at end of file
++};
+diff --git a/src/SignalR/clients/ts/webpack.config.base.js b/src/SignalR/clients/ts/webpack.config.base.js
+index 0bf3a9d0e..bee97ac15 100644
+--- a/src/SignalR/clients/ts/webpack.config.base.js
++++ b/src/SignalR/clients/ts/webpack.config.base.js
+@@ -80,6 +80,9 @@ module.exports = function (modulePath, browserBaseName, options) {
+                 verbose: false
+             })
+         ],
++        performance: {
++            hints: false,
++        },
+         optimization: {
+           sideEffects: true,
+           concatenateModules: true,
+@@ -119,4 +122,4 @@ module.exports = function (modulePath, browserBaseName, options) {
+     webpackOptions.entry[browserBaseName] = path.resolve(modulePath, "src", "browser-index.ts");
+     webpackOptions.entry[`${browserBaseName}.min`] = path.resolve(modulePath, "src", "browser-index.ts");
+     return webpackOptions;
+-}
+\ No newline at end of file
++}
