@@ -1,0 +1,22 @@
+From 6c2758897402e88562fa9875c2c359ac6ef15b1f Mon Sep 17 00:00:00 2001
+From: Tomas Weinfurt <tweinfurt@yahoo.com>
+Date: Mon, 10 Jan 2022 06:01:44 -0800
+Subject: [PATCH] disable lltng on FreeBSD as the package is no longer
+ available (#63567)
+
+---
+ src/coreclr/pal/src/eventprovider/CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/coreclr/pal/src/eventprovider/CMakeLists.txt b/src/coreclr/pal/src/eventprovider/CMakeLists.txt
+index aaf420458a6bc..143206b5c34f5 100644
+--- a/src/coreclr/pal/src/eventprovider/CMakeLists.txt
++++ b/src/coreclr/pal/src/eventprovider/CMakeLists.txt
+@@ -1,6 +1,6 @@
+ set(EVENT_MANIFEST ${VM_DIR}/ClrEtwAll.man)
+ 
+-if(CLR_CMAKE_HOST_LINUX OR CLR_CMAKE_HOST_FREEBSD)
++if(CLR_CMAKE_HOST_LINUX)
+   add_subdirectory(lttngprovider)
+ else()
+   add_subdirectory(dummyprovider)

@@ -1,7 +1,7 @@
 # dotnet-freebsd-crossbuild
 Bash script and patches for building dotNET for FreeBSD under Linux
 
-Currently working for: v6.0.0RTM v6.0.100-rtm.21527.11 and older (check commits if you want to build old versions)
+Currently working for: v6.0.3 / v6.0.201 SDK and older (check commits if you want to build old versions)
 
 ## Why would I use this?
 You don't need / want SDK builds in Azure DevOPS
@@ -60,4 +60,8 @@ Yes! Please see https://github.com/Servarr/dotnet-bsd
 ## I am too lazy to build this! Got a prebuilt SDK?
 Yes! Also covered by the above!
 
-I also try and publish it here too, open a ticket if I am more than a few days behind an official release.
+I try and publish it here too as a crossbuild. 
+
+I also have a native-crossgen build here: https://github.com/Thefrank/dotnet-freebsd-native-binaries
+
+Open a ticket if I am more than a few days behind an official release and I will try and get an update published as quick as I can
