@@ -10,6 +10,7 @@ apt-get update
 apt-get install -y apt-transport-https
 apt-get update
 apt-get install -y dotnet-sdk-5.0
+apt-get install -y dotnet-sdk-6.0
 
 # everything else needed for build script
 apt-get install -y --no-install-recommends emacs-nox git nodejs npm jq

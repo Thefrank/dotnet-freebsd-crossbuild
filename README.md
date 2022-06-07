@@ -1,7 +1,7 @@
 # dotnet-freebsd-crossbuild
 Bash script and patches for building dotNET for FreeBSD under Linux
 
-Currently working for: v6.0.3 / v6.0.201 SDK and older (check commits if you want to build old versions)
+Currently working for: v7.0.100-preview.3.22179.4 and older (check commits and/or tags if you want to build old versions)
 
 ## Why would I use this?
 You don't need / want SDK builds in Azure DevOPS
@@ -37,7 +37,7 @@ For building dotNET under FreeBSD natively:
 
 - either the tarball or zip from `./installer/artifacts/packages/Release/Shipping/`
 - the contents of `./nuget/`
-- numerous other patches not covered here
+- numerous other patches not covered here if building dotNET6 or lower.
 
 ## Can I use the NuGet packages to build for FreeBSD on other platforms?
 MAYBE!
