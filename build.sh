@@ -5,9 +5,9 @@ set -e
 #Tags (NOT BRANCH)
 #NOTE: For best results use all the same tags as found here: https://github.com/dotnet/core/tags for each component. 
 
-RUNTIMETAG=v7.0.0-preview.4.22229.4
-ASPNETTAG=v7.0.0-preview.4.22251.1
-INSTALLERTAG=v7.0.100-preview.4.22252.9
+RUNTIMETAG=v7.0.0-preview.5.22301.12
+ASPNETTAG=v7.0.0-preview.5.22303.8
+INSTALLERTAG=v7.0.100-preview.5.22307.18
 
 #Use a helper script for reverse engineering BUILDID calculations
 source ./common.sh
