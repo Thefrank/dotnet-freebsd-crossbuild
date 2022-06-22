@@ -1,8 +1,8 @@
 diff --git a/src/redist/targets/GenerateBundledVersions.targets b/src/redist/targets/GenerateBundledVersions.targets
-index 15cc06f7c..16d036836 100644
+index 81e1600..d9921bf 100644
 --- a/src/redist/targets/GenerateBundledVersions.targets
 +++ b/src/redist/targets/GenerateBundledVersions.targets
-@@ -90,7 +90,7 @@
+@@ -133,7 +133,7 @@
            win-x86;
            " />
  
@@ -11,17 +11,18 @@ index 15cc06f7c..16d036836 100644
  
        <Net50AppHostRids Include="
            @(NetCore31RuntimePackRids);
-@@ -177,6 +177,7 @@
-           linux-musl-arm;
-           linux-musl-arm64;
-           osx-arm64;
-+          freebsd-x64;
-           osx-x64;
-           win-arm;
-           win-arm64;
-@@ -185,7 +186,7 @@
+@@ -211,7 +211,7 @@
+         linux-arm64;
+         " />
  
-       <Crossgen2SupportedRids Include="@(Net60Crossgen2SupportedRids)" />
+-      <Net50Crossgen2SupportedRids Include="linux-musl-x64;linux-x64;win-x64" />
++      <Net50Crossgen2SupportedRids Include="linux-musl-x64;linux-x64;win-x64;freebsd-x64" />
+ 
+       <Net60Crossgen2SupportedRids Include="
+           @(Net50Crossgen2SupportedRids);
+@@ -230,7 +230,7 @@
+ 
+       <ILCompilerSupportedRids Include="linux-musl-x64;linux-x64;linux-arm64;win-x64;win-arm64" />
  
 -      <AspNetCore31RuntimePackRids Include="@(AspNetCore30RuntimePackRids)" />
 +      <AspNetCore31RuntimePackRids Include="@(AspNetCore30RuntimePackRids);freebsd-x64" />
