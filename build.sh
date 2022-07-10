@@ -5,9 +5,9 @@ set -e
 #Tags (NOT BRANCH)
 #NOTE: For best results use all the same tags as found here: https://github.com/dotnet/core/tags for each component. 
 
-RUNTIMETAG=v7.0.0-preview.5.22301.12
-ASPNETTAG=v7.0.0-preview.5.22303.8
-INSTALLERTAG=v7.0.100-preview.5.22307.18
+RUNTIMETAG=v6.0.6
+ASPNETTAG=v6.0.6
+INSTALLERTAG=v6.0.301
 
 #Use a helper script for reverse engineering BUILDID calculations
 source ./common.sh
@@ -16,6 +16,8 @@ source ./common.sh
 git clone --depth 1 --branch $RUNTIMETAG https://github.com/dotnet/runtime.git
 ### Patches, if any
 sed -i '/\/dnceng\/internal\//d' runtime/NuGet.config
+git -C runtime apply ../patches/patch_runtimeRTM.patch
+git -C runtime apply ../patches/6c2758897402e88562fa9875c2c359ac6ef15b1f.patch
 ### Build Runtime in Docker (we look for the freebsd 12 variant as 11 is EOL).
 ## We also use the helper script to make sure the BUILDID is correct
 calculate_build_id $(git -C runtime tag --points-at HEAD)
@@ -28,6 +30,7 @@ docker run -e ROOTFS_DIR=/crossrootfs/x64 -v $(pwd)/runtime:/runtime $DOTNET_DOC
 git clone --recursive --depth 1 --branch $ASPNETTAG https://github.com/dotnet/aspnetcore.git
 ### Patches, if any
 sed -i '/\/dnceng\/internal\//d' aspnetcore/NuGet.config
+git -C aspnetcore apply ../patches/patch_aspnetcoreRTM.patch
 ### dotnet NuGet Source Fix (add prior build output)
 dotnet nuget add source ../runtime/artifacts/packages/Release/Shipping --name runtime --configfile aspnetcore/NuGet.config
 ### Copy Missing Item (restore will try but fail to find this so we have to add it manually)
