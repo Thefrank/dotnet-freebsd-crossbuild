@@ -5,9 +5,9 @@ set -e
 #Tags (NOT BRANCH)
 #NOTE: For best results use all the same tags as found here: https://github.com/dotnet/core/tags for each component. 
 
-RUNTIMETAG=v6.0.6
-ASPNETTAG=v6.0.6
-INSTALLERTAG=v6.0.301
+RUNTIMETAG=v6.0.7
+ASPNETTAG=v6.0.7
+INSTALLERTAG=v6.0.302
 
 #Use a helper script for reverse engineering BUILDID calculations
 source ./common.sh
@@ -47,7 +47,7 @@ aspnetcore/eng/build.sh -c Release -ci --os-name freebsd -pack /p:CrossgenOutput
 git clone --depth 1 --branch $INSTALLERTAG https://github.com/dotnet/installer.git
 ### Patches, if any
 ## adds support for RID freebsd-x64
-git -C installer apply ../patches/patch_installerRTM.patch
+git -C installer apply ../patches/patch_installer607.patch
 ### dotnet NuGet Source Fixes (remove historically problematic/private feed that seem to only appear here, add prior build outputs, and remove any internal feeds)
 dotnet nuget remove source msbuild --configfile installer/NuGet.config || true
 dotnet nuget remove source nuget-build --configfile installer/NuGet.config || true
