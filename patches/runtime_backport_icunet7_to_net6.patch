@@ -104,13 +104,15 @@ index 4f71b66c267..20eb1d0bb76 100644
  
  #undef PER_FUNCTION_BLOCK
 diff --git a/src/libraries/Native/Unix/System.Globalization.Native/pal_icushim_internal.h b/src/libraries/Native/Unix/System.Globalization.Native/pal_icushim_internal.h
-index 1ddaff5594a..4c9360940e6 100644
+index 1ddaff5594a..71f5f97aede 100644
 --- a/src/libraries/Native/Unix/System.Globalization.Native/pal_icushim_internal.h
 +++ b/src/libraries/Native/Unix/System.Globalization.Native/pal_icushim_internal.h
-@@ -62,6 +62,29 @@ U_CAPI int32_t U_EXPORT2 ucal_getTimeZoneIDForWindowsID(const UChar* winid, int3
+@@ -60,7 +60,29 @@
+ // We have to do runtime check before using the pointers to these APIs. That is why these are listed in the FOR_ALL_OPTIONAL_ICU_FUNCTIONS list.
+ U_CAPI int32_t U_EXPORT2 ucal_getTimeZoneIDForWindowsID(const UChar* winid, int32_t len, const char* region, UChar* id, int32_t idCapacity, UErrorCode* status);
  U_CAPI int32_t U_EXPORT2 ucal_getWindowsTimeZoneID(const UChar* id, int32_t len, UChar* winid, int32_t winidCapacity, UErrorCode* status);
- #endif
- 
+-#endif
++
 +// (U_ICU_VERSION_MAJOR_NUM < 71)
 +// The following API is not supported in the ICU versions less than 71. We need to define it manually.
 +// We have to do runtime check before using the pointers to this API. That is why these are listed in the FOR_ALL_OPTIONAL_ICU_FUNCTIONS list.
@@ -133,11 +135,10 @@ index 1ddaff5594a..4c9360940e6 100644
 +
 +extern ucol_setVariableTop_func ucol_setVariableTop_ptr;
 +extern ucol_safeClone_func ucol_safeClone_ptr;
-+
+ 
  // List of all functions from the ICU libraries that are used in the System.Globalization.Native.so
  #define FOR_ALL_UNCONDITIONAL_ICU_FUNCTIONS \
-     PER_FUNCTION_BLOCK(u_charsToUChars, libicuuc, true) \
-@@ -99,7 +122,6 @@ U_CAPI int32_t U_EXPORT2 ucal_getWindowsTimeZoneID(const UChar* id, int32_t len,
+@@ -99,7 +121,6 @@ U_CAPI int32_t U_EXPORT2 ucal_getWindowsTimeZoneID(const UChar* id, int32_t len,
      PER_FUNCTION_BLOCK(ucol_open, libicui18n, true) \
      PER_FUNCTION_BLOCK(ucol_openElements, libicui18n, true) \
      PER_FUNCTION_BLOCK(ucol_openRules, libicui18n, true) \
@@ -145,7 +146,7 @@ index 1ddaff5594a..4c9360940e6 100644
      PER_FUNCTION_BLOCK(ucol_setAttribute, libicui18n, true) \
      PER_FUNCTION_BLOCK(ucol_strcoll, libicui18n, true) \
      PER_FUNCTION_BLOCK(udat_close, libicui18n, true) \
-@@ -195,7 +217,9 @@ U_CAPI int32_t U_EXPORT2 ucal_getWindowsTimeZoneID(const UChar* id, int32_t len,
+@@ -195,7 +216,9 @@ U_CAPI int32_t U_EXPORT2 ucal_getWindowsTimeZoneID(const UChar* id, int32_t len,
  // Otherwise, we'll just not provide the functionality to users which needed these APIs.
  #define FOR_ALL_OPTIONAL_ICU_FUNCTIONS \
      PER_FUNCTION_BLOCK(ucal_getWindowsTimeZoneID, libicui18n, false) \
@@ -156,7 +157,7 @@ index 1ddaff5594a..4c9360940e6 100644
  
  #define FOR_ALL_ICU_FUNCTIONS \
      FOR_ALL_UNCONDITIONAL_ICU_FUNCTIONS \
-@@ -235,6 +259,7 @@ FOR_ALL_ICU_FUNCTIONS
+@@ -235,6 +258,7 @@ FOR_ALL_ICU_FUNCTIONS
  #define ucal_openTimeZoneIDEnumeration(...) ucal_openTimeZoneIDEnumeration_ptr(__VA_ARGS__)
  #define ucal_set(...) ucal_set_ptr(__VA_ARGS__)
  #define ucal_setMillis(...) ucal_setMillis_ptr(__VA_ARGS__)
@@ -164,7 +165,7 @@ index 1ddaff5594a..4c9360940e6 100644
  #define ucol_close(...) ucol_close_ptr(__VA_ARGS__)
  #define ucol_closeElements(...) ucol_closeElements_ptr(__VA_ARGS__)
  #define ucol_getOffset(...) ucol_getOffset_ptr(__VA_ARGS__)
-@@ -247,7 +272,6 @@ FOR_ALL_ICU_FUNCTIONS
+@@ -247,7 +271,6 @@ FOR_ALL_ICU_FUNCTIONS
  #define ucol_open(...) ucol_open_ptr(__VA_ARGS__)
  #define ucol_openElements(...) ucol_openElements_ptr(__VA_ARGS__)
  #define ucol_openRules(...) ucol_openRules_ptr(__VA_ARGS__)
