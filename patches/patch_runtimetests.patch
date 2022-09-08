@@ -61,7 +61,20 @@ index 22647a92f37..0094704f1dc 100644
                  "win" => OSPlatform.Windows,
                  "osx" => OSPlatform.OSX,
                  "linux" => OSPlatform.Linux,
-+		"freebsd" => OSPlatform.FreeBSD,
++                "freebsd" => OSPlatform.FreeBSD,
                  _ => throw new ArgumentException(nameof(runtimeIdentifier))
              };
          }
+diff --git a/src/installer/managed/Microsoft.NET.HostModel/Microsoft.NET.HostModel.csproj b/src/installer/managed/Microsoft.NET.HostModel/Microsoft.NET.HostModel.csproj
+index 679289bca37..66e2444b3c0 100644
+--- a/src/installer/managed/Microsoft.NET.HostModel/Microsoft.NET.HostModel.csproj
++++ b/src/installer/managed/Microsoft.NET.HostModel/Microsoft.NET.HostModel.csproj
+@@ -1,7 +1,7 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+ 
+   <PropertyGroup>
+-    <TargetFramework>netstandard2.0</TargetFramework>
++    <TargetFramework>netcoreapp3.0</TargetFramework>
+     <Description>Abstractions for modifying .NET host binaries</Description>
+     <IsShipping>false</IsShipping>
+     <IsPackable>true</IsPackable>
