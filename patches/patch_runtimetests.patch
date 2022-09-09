@@ -74,7 +74,7 @@ index 679289bca37..66e2444b3c0 100644
  
    <PropertyGroup>
 -    <TargetFramework>netstandard2.0</TargetFramework>
-+    <TargetFramework>netcoreapp3.1</TargetFramework>
++    <TargetFramework>net6.0</TargetFramework>
      <Description>Abstractions for modifying .NET host binaries</Description>
      <IsShipping>false</IsShipping>
      <IsPackable>true</IsPackable>
