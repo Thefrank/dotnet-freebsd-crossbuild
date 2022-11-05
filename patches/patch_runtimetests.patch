@@ -77,3 +77,16 @@ index 679289bca37..66e2444b3c0 100644
      <Description>Abstractions for modifying .NET host binaries</Description>
      <IsShipping>false</IsShipping>
      <IsPackable>true</IsPackable>
+diff --git a/src/coreclr/tools/Common/CommandLineHelpers.cs b/src/coreclr/tools/Common/CommandLineHelpers.cs
+index d4f4b002aa4..831b9b14b0c 100644
+--- a/src/coreclr/tools/Common/CommandLineHelpers.cs
++++ b/src/coreclr/tools/Common/CommandLineHelpers.cs
+@@ -76,6 +76,8 @@ public static TargetOS GetTargetOS(string token)
+                 return TargetOS.Linux;
+             else if (token.Equals("osx", StringComparison.OrdinalIgnoreCase))
+                 return TargetOS.OSX;
++            else if (token.Equals("freebsd", StringComparison.OrdinalIgnoreCase))
++                return TargetOS.FreeBSD;
+ 
+             throw new CommandLineException($"Target OS '{token}' is not supported");
+         }
