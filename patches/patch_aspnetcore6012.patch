@@ -1,0 +1,19 @@
+diff --git a/eng/Dependencies.props b/eng/Dependencies.props
+index d39473508..b0f4f294b 100644
+--- a/eng/Dependencies.props
++++ b/eng/Dependencies.props
+@@ -95,6 +95,7 @@ and are generated based on the last package release.
+     <LatestPackageReference Include="Microsoft.NETCore.App.Runtime.linux-musl-x64" />
+     <LatestPackageReference Include="Microsoft.NETCore.App.Runtime.linux-musl-arm" />
+     <LatestPackageReference Include="Microsoft.NETCore.App.Runtime.linux-musl-arm64" />
++    <LatestPackageReference Include="Microsoft.NETCore.App.Runtime.freebsd-x64" />
+     <LatestPackageReference Include="Microsoft.NETCore.App.Runtime.$(TargetRuntimeIdentifier)" Condition=" '$(PortableBuild)' == 'false' " />
+ 
+     <!-- Crossgen2 compiler -->
+@@ -110,6 +111,7 @@ and are generated based on the last package release.
+     <LatestPackageReference Include="Microsoft.NETCore.App.Crossgen2.win-x86" />
+     <LatestPackageReference Include="Microsoft.NETCore.App.Crossgen2.win-arm" />
+     <LatestPackageReference Include="Microsoft.NETCore.App.Crossgen2.win-arm64" />
++    <LatestPackageReference Include="Microsoft.NETCore.App.Crossgen2.freebsd-x64" />
+     <LatestPackageReference Include="Microsoft.NETCore.App.Crossgen2.$(TargetRuntimeIdentifier)" Condition=" '$(PortableBuild)' == 'false' " />
+   </ItemGroup>
