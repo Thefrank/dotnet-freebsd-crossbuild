@@ -17,3 +17,4 @@ index d39473508..b0f4f294b 100644
 +    <LatestPackageReference Include="Microsoft.NETCore.App.Crossgen2.freebsd-x64" />
      <LatestPackageReference Include="Microsoft.NETCore.App.Crossgen2.$(TargetRuntimeIdentifier)" Condition=" '$(PortableBuild)' == 'false' " />
    </ItemGroup>
+ 
