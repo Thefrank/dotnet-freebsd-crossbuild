@@ -58,10 +58,11 @@ You will also need these NuGet packages produced by this repo or the Azure versi
 Yes! Please see https://github.com/Servarr/dotnet-bsd
 
 ## I am too lazy to build this! Got a prebuilt SDK?
-Yes! Also covered by the above!
+Yes! Covered by the above!
 
-I try and publish it here too as a crossbuild. 
+I try and publish it here too as a crossbuild. These currently target FreeBSD 12.2+
 
-I also have a native-crossgen build here: https://github.com/Thefrank/dotnet-freebsd-native-binaries
+I also have a native crossgen build here: https://github.com/Thefrank/dotnet-freebsd-native-binaries
+@sec also has a (better) native crossgen build that can be found here: https://github.com/sec/dotnet-core-freebsd-source-build
 
 Open a ticket if I am more than a few days behind an official release and I will try and get an update published as quick as I can
