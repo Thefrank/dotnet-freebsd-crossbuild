@@ -64,5 +64,6 @@ I try and publish it here too as a crossbuild. These currently target FreeBSD 12
 
 I also have a native crossgen build here: https://github.com/Thefrank/dotnet-freebsd-native-binaries
 @sec also has a (better) native crossgen build that can be found here: https://github.com/sec/dotnet-core-freebsd-source-build
+There is even an ARM64 build!
 
 Open a ticket if I am more than a few days behind an official release and I will try and get an update published as quick as I can
