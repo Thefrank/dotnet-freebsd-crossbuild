@@ -26,6 +26,10 @@ For just running it please look here:
 
 For building code, you will need:
 
+NEW!: This public feed should provide (most) of my built items: 
+- https://pkgs.dev.azure.com/IFailAt/freebsd-dotnet-runtime-nightly/_packaging/freebsd-dotnet/nuget/v3/index.json
+
+OLD:
 - either the tarball or zip from `./installer/artifacts/packages/Release/Shipping/`
  - from runtime (also found in `./nuget/`):
     - Microsoft.NETCore.App.Host.freebsd-x64.VERSION.nupkg
@@ -60,7 +64,7 @@ Yes! Please see https://github.com/Servarr/dotnet-bsd
 ## I am too lazy to build this! Got a prebuilt SDK?
 Yes! Covered by the above!
 
-I try and publish it here too as a crossbuild. These currently target FreeBSD 12.2+
+I try and publish it here too as a crossbuild. These currently target FreeBSD 13.1+
 
 I also have a native crossgen build here: https://github.com/Thefrank/dotnet-freebsd-native-binaries
 @sec also has a (better) native crossgen build that can be found here: https://github.com/sec/dotnet-core-freebsd-source-build
