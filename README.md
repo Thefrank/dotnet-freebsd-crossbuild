@@ -26,8 +26,13 @@ For just running it please look here:
 
 For building code, you will need:
 
-NEW!: This public feed should provide (most) of my built items: 
+NEW!: This public feed should provide (most) of my (recently) built items: 
 - https://pkgs.dev.azure.com/IFailAt/freebsd-dotnet-runtime-nightly/_packaging/freebsd-dotnet/nuget/v3/index.json
+  - Cons: As this is Azure-based it will be limited to only the RTM and the newest few releases
+  - Pros: Easy to add to NuGet.config or donet source list, no auth needed
+- https://nuget.pkg.github.com/TheFrank/index.json
+  - Cons: requires API auth but any GH account should be able to access it 
+  - Pros: has all packages from this repo
 
 OLD:
 - either the tarball or zip from `./installer/artifacts/packages/Release/Shipping/`
