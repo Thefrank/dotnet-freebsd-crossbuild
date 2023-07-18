@@ -1,7 +1,7 @@
 # dotnet-freebsd-crossbuild
 Bash script and patches for building dotNET for FreeBSD under Linux
 
-Currently working for: 7.0.100-preview.5.22307.18 and older (check commits and/or tags if you want to build old versions)
+Currently working for: 8.0-preview-6, 7.0.306, 6.0.412(? upstream SDK tag missing), and older (check commits and/or tags if you want to build old versions)
 
 ## Why would I use this?
 You don't need / want SDK builds in Azure DevOPS
@@ -26,6 +26,15 @@ For just running it please look here:
 
 For building code, you will need:
 
+NEW!: This public feed should provide (most) of my (recently) built items: 
+- https://pkgs.dev.azure.com/IFailAt/freebsd-dotnet-runtime-nightly/_packaging/freebsd-dotnet/nuget/v3/index.json
+  - Cons: As this is Azure-based it will be limited to only the RTM and the newest few releases
+  - Pros: Easy to add to NuGet.config or donet source list, no auth needed
+- https://nuget.pkg.github.com/TheFrank/index.json
+  - Cons: requires API auth but any GH account should be able to access it 
+  - Pros: has all packages from this repo
+
+OLD:
 - either the tarball or zip from `./installer/artifacts/packages/Release/Shipping/`
  - from runtime (also found in `./nuget/`):
     - Microsoft.NETCore.App.Host.freebsd-x64.VERSION.nupkg
@@ -58,10 +67,12 @@ You will also need these NuGet packages produced by this repo or the Azure versi
 Yes! Please see https://github.com/Servarr/dotnet-bsd
 
 ## I am too lazy to build this! Got a prebuilt SDK?
-Yes! Also covered by the above!
+Yes! Covered by the above!
 
-I try and publish it here too as a crossbuild. 
+I try and publish it here too as a crossbuild. These currently target FreeBSD 13.1+
 
-I also have a native-crossgen build here: https://github.com/Thefrank/dotnet-freebsd-native-binaries
+I also have a native crossgen build here: https://github.com/Thefrank/dotnet-freebsd-native-binaries
+@sec also has a (better) native crossgen build that can be found here: https://github.com/sec/dotnet-core-freebsd-source-build
+There is even an ARM64 build!
 
 Open a ticket if I am more than a few days behind an official release and I will try and get an update published as quick as I can
