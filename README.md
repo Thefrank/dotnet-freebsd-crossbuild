@@ -1,7 +1,7 @@
 # dotnet-freebsd-crossbuild
 Bash script and patches for building dotNET for FreeBSD under Linux
 
-Currently working for: v8.0.100-rc.2.23502.2, 7.0.402 (requires manual patching on all config), 6.0.415, and older (check commits and/or tags if you want to build old versions)
+Currently working for: v8.0.100-rc.2.23502.2, 7.0.402 (requires manual patching on all config), 6.0.416, and older (check commits and/or tags if you want to build old versions)
 
 ## Why would I use this?
 You don't need / want SDK builds in Azure DevOPS
