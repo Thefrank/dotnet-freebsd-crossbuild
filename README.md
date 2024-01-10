@@ -20,6 +20,7 @@ FreeBSD 12.4 (EOL)
 
 FreeBSD 13.2
 - net8 SDK >= 8.0.101
+- net7 SDK >= 7.0.405
 
 ## Why would I use this?
 You don't need / want SDK builds in Azure DevOPS
