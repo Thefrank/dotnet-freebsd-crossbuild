@@ -2,7 +2,24 @@
 Bash script and patches for building dotNET for FreeBSD under Linux
 
 Currently working for: v8.0.101, 7.0.403, 6.0.416, and older (check commits and/or tags if you want to build old versions)
-Currently published here: Version <= 8.0.0 FreeBSD 12.4. Version >= 8.0.1 FreeBSD 13.2
+
+Scripts might require some tweaks. 
+
+If you want a more comprehensive, repo-by-repo script setup:
+@sec also has a (better) native crossgen build that can be found here: https://github.com/sec/dotnet-core-freebsd-source-build
+
+
+## What is here?
+
+Currently published here: 
+
+FreeBSD 12.4 (EOL)
+- net8 SDK <= 8.0.101
+- net7 SDK <= 7.0.403
+- net6 SDK <= 6.0.416
+
+FreeBSD 13.2
+- net8 SDK >= 8.0.101
 
 ## Why would I use this?
 You don't need / want SDK builds in Azure DevOPS
@@ -30,6 +47,7 @@ For building code, you will need:
 NEW!: This public feed should provide (most) of my (recently) built items: 
 - https://pkgs.dev.azure.com/IFailAt/freebsd-dotnet-runtime-nightly/_packaging/freebsd-dotnet/nuget/v3/index.json
   - Cons: As this is Azure-based it will be limited to only the RTM and the newest few releases
+  - Cons: Due to limited storage this only contains FreeBSD 12.4 supported NuGets
   - Pros: Easy to add to NuGet.config or donet source list, no auth needed
 - https://nuget.pkg.github.com/TheFrank/index.json
   - Cons: requires API auth but any GH account should be able to access it 
@@ -65,15 +83,8 @@ You will also need these NuGet packages produced by this repo or the Azure versi
  - Microsoft.AspNetCore.App.Runtime.freebsd-x64.VERSION.nupkg
 
 ## Got Azure DevOPS version?
-Yes! Please see https://github.com/Servarr/dotnet-bsd
+Yes! The Servarr teams maintains: https://github.com/Servarr/dotnet-bsd
 
-## I am too lazy to build this! Got a prebuilt SDK?
-Yes! Covered by the above!
-
-I try and publish it here too as a crossbuild. These currently target FreeBSD 13.1+
-
-I also have a native crossgen build here: https://github.com/Thefrank/dotnet-freebsd-native-binaries
-@sec also has a (better) native crossgen build that can be found here: https://github.com/sec/dotnet-core-freebsd-source-build
-There is even an ARM64 build!
+## Updates
 
 Open a ticket if I am more than a few days behind an official release and I will try and get an update published as quick as I can
