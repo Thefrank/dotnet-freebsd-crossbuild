@@ -14,7 +14,7 @@ If you want a more comprehensive, repo-by-repo script setup:
 Currently published here: 
 
 FreeBSD 12.4 (EOL)
-- net8 SDK <= 8.0.101
+- net8 SDK <= 8.0.100
 - net7 SDK <= 7.0.403
 - net6 SDK <= 6.0.416
 
