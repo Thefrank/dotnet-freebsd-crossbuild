@@ -1,0 +1,26 @@
+diff --git a/eng/pipelines/common/templates/pipeline-with-resources.yml b/eng/pipelines/common/templates/pipeline-with-resources.yml
+index d50977f1bf08e8..7b41d3c2abc69d 100644
+--- a/eng/pipelines/common/templates/pipeline-with-resources.yml
++++ b/eng/pipelines/common/templates/pipeline-with-resources.yml
+@@ -96,7 +96,7 @@ resources:
+         ROOTFS_DIR: /crossrootfs/x64
+ 
+     - container: freebsd_x64
+-      image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross-freebsd-12
++      image: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-amd64-freebsd-13
+       env:
+         ROOTFS_DIR: /crossrootfs/x64
+ 
+diff --git a/src/coreclr/debug/daccess/CMakeLists.txt b/src/coreclr/debug/daccess/CMakeLists.txt
+index 9a867c078019dd..5332e957c9eca1 100644
+--- a/src/coreclr/debug/daccess/CMakeLists.txt
++++ b/src/coreclr/debug/daccess/CMakeLists.txt
+@@ -53,7 +53,7 @@ if(CLR_CMAKE_HOST_FREEBSD OR CLR_CMAKE_HOST_NETBSD OR CLR_CMAKE_HOST_SUNOS)
+     DEPENDS coreclr
+     VERBATIM
+     COMMAND_EXPAND_LISTS
+-    COMMAND ${CLR_DIR}/pal/tools/gen-dactable-rva.sh ${args}
++    COMMAND ${CMAKE_COMMAND} -E env NM=${CMAKE_NM} ${CLR_DIR}/pal/tools/gen-dactable-rva.sh ${args}
+     COMMENT Generating ${GENERATED_INCLUDE_DIR}/dactablerva.h
+   )
+ 
