@@ -1,5 +1,5 @@
 diff --git a/src/native/libs/System.Security.Cryptography.Native/opensslshim.c b/src/native/libs/System.Security.Cryptography.Native/opensslshim.c
-index d21d6273410119..cd3e5f46b87da6 100644
+index d21d62734101..cd3e5f46b87d 100644
 --- a/src/native/libs/System.Security.Cryptography.Native/opensslshim.c
 +++ b/src/native/libs/System.Security.Cryptography.Native/opensslshim.c
 @@ -116,8 +116,21 @@ static void OpenLibraryOnce(void)
