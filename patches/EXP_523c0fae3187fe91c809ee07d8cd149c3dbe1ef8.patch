@@ -1,0 +1,140 @@
+From 523c0fae3187fe91c809ee07d8cd149c3dbe1ef8 Mon Sep 17 00:00:00 2001
+From: Adeel <3840695+am11@users.noreply.github.com>
+Date: Wed, 20 Mar 2024 12:35:48 +0200
+Subject: [PATCH] Fallback to cpuset_getaffinity on FreeBSD
+
+---
+ src/coreclr/gc/unix/gcenv.unix.cpp                   | 11 ++++++++++-
+ .../nativeaot/Runtime/unix/PalRedhawkUnix.cpp        | 12 +++++++++++-
+ src/coreclr/pal/src/misc/sysinfo.cpp                 |  9 +++++++++
+ src/coreclr/pal/src/thread/thread.cpp                |  9 +++++++++
+ src/mono/mono/utils/mono-proclib.c                   |  9 ++++++++-
+ src/native/libs/System.Native/pal_process.c          |  9 +++++++++
+ 6 files changed, 56 insertions(+), 3 deletions(-)
+
+diff --git a/src/coreclr/gc/unix/gcenv.unix.cpp b/src/coreclr/gc/unix/gcenv.unix.cpp
+index 6f1a254a0528..9b0aaafef326 100644
+--- a/src/coreclr/gc/unix/gcenv.unix.cpp
++++ b/src/coreclr/gc/unix/gcenv.unix.cpp
+@@ -294,7 +294,16 @@ bool GCToOSInterface::Initialize()
+ #if HAVE_SCHED_GETAFFINITY
+ 
+     cpu_set_t cpuSet;
+-    int st = sched_getaffinity(getpid(), sizeof(cpu_set_t), &cpuSet);
++    pid_t pid = getpid();
++    int st = sched_getaffinity(pid, sizeof(cpu_set_t), &cpuSet);
++
++#ifdef TARGET_FREEBSD
++    if (st != 0)
++    {
++        // in FreeBSD 13.2 Jail environment, sched_getaffinity fails due to an implementation bug; fallback to cpuset_getaffinity
++        st = cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, pid == 0 ? -1 : pid, sizeof(cpu_set_t), &cpuSet);
++    }
++#endif
+ 
+     if (st == 0)
+     {
+diff --git a/src/coreclr/nativeaot/Runtime/unix/PalRedhawkUnix.cpp b/src/coreclr/nativeaot/Runtime/unix/PalRedhawkUnix.cpp
+index 6286ff80a405..970fd018b1a3 100644
+--- a/src/coreclr/nativeaot/Runtime/unix/PalRedhawkUnix.cpp
++++ b/src/coreclr/nativeaot/Runtime/unix/PalRedhawkUnix.cpp
+@@ -363,7 +363,17 @@ void InitializeCurrentProcessCpuCount()
+ #if HAVE_SCHED_GETAFFINITY
+ 
+         cpu_set_t cpuSet;
+-        int st = sched_getaffinity(getpid(), sizeof(cpu_set_t), &cpuSet);
++        pid_t pid = getpid();
++        int st = sched_getaffinity(pid, sizeof(cpu_set_t), &cpuSet);
++
++#ifdef TARGET_FREEBSD
++        if (st != 0)
++        {
++            // in FreeBSD 13.2 Jail environment, sched_getaffinity fails due to an implementation bug; fallback to cpuset_getaffinity
++            st = cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, pid == 0 ? -1 : pid, sizeof(cpu_set_t), &cpuSet);
++        }
++#endif
++
+         if (st != 0)
+         {
+             _ASSERTE(!"sched_getaffinity failed");
+diff --git a/src/coreclr/pal/src/misc/sysinfo.cpp b/src/coreclr/pal/src/misc/sysinfo.cpp
+index d20fa7b2aabe..48ebf97615d8 100644
+--- a/src/coreclr/pal/src/misc/sysinfo.cpp
++++ b/src/coreclr/pal/src/misc/sysinfo.cpp
+@@ -145,6 +145,15 @@ PAL_GetLogicalCpuCountFromOS()
+ 
+         cpu_set_t cpuSet;
+         int st = sched_getaffinity(gPID, sizeof(cpu_set_t), &cpuSet);
++
++#ifdef TARGET_FREEBSD
++        if (st != 0)
++        {
++            // in FreeBSD 13.2 Jail environment, sched_getaffinity fails due to an implementation bug; fallback to cpuset_getaffinity
++            st = cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, gPID == 0 ? -1 : gPID, sizeof(cpu_set_t), &cpuSet);
++        }
++#endif
++
+         if (st != 0)
+         {
+             ASSERT("sched_getaffinity failed (%d)\n", errno);
+diff --git a/src/coreclr/pal/src/thread/thread.cpp b/src/coreclr/pal/src/thread/thread.cpp
+index 9420a442c1f6..bb8214b74d7b 100644
+--- a/src/coreclr/pal/src/thread/thread.cpp
++++ b/src/coreclr/pal/src/thread/thread.cpp
+@@ -1665,6 +1665,15 @@ CPalThread::ThreadEntry(
+     CPU_ZERO(&cpuSet);
+ 
+     st = sched_getaffinity(gPID, sizeof(cpu_set_t), &cpuSet);
++
++#ifdef TARGET_FREEBSD
++        if (st != 0)
++        {
++            // in FreeBSD 13.2 Jail environment, sched_getaffinity fails due to an implementation bug; fallback to cpuset_getaffinity
++            st = cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, gPID == 0 ? -1 : gPID, sizeof(cpu_set_t), &cpuSet);
++        }
++#endif
++
+     if (st != 0)
+     {
+         ASSERT("sched_getaffinity failed!\n");
+diff --git a/src/mono/mono/utils/mono-proclib.c b/src/mono/mono/utils/mono-proclib.c
+index 2627c5aa059f..47cc67f33b91 100644
+--- a/src/mono/mono/utils/mono-proclib.c
++++ b/src/mono/mono/utils/mono-proclib.c
+@@ -162,8 +162,15 @@ mono_cpu_count (void)
+ #ifdef HAVE_SCHED_GETAFFINITY
+ 	{
+ 		cpu_set_t set;
+-		if (sched_getaffinity (mono_process_current_pid (), sizeof (set), &set) == 0)
++		int pid = mono_process_current_pid ();
++		if (sched_getaffinity (pid, sizeof (cpu_set_t), &set) == 0)
+ 			return CPU_COUNT (&set);
++
++#ifdef TARGET_FREEBSD
++		// in FreeBSD 13.2 Jail environment, sched_getaffinity fails due to an implementation bug; fallback to cpuset_getaffinity
++		if (cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, pid == 0 ? -1 : pid, sizeof(cpu_set_t), &set) == 0)
++			return CPU_COUNT (&set);
++#endif
+ 	}
+ #endif
+ #if defined (_SC_NPROCESSORS_ONLN) && defined (HAVE_SYSCONF)
+diff --git a/src/native/libs/System.Native/pal_process.c b/src/native/libs/System.Native/pal_process.c
+index 509049b2fdcd..2df4a78b6243 100644
+--- a/src/native/libs/System.Native/pal_process.c
++++ b/src/native/libs/System.Native/pal_process.c
+@@ -841,6 +841,15 @@ int32_t SystemNative_SchedGetAffinity(int32_t pid, intptr_t* mask)
+ 
+     cpu_set_t set;
+     int32_t result = sched_getaffinity(pid, sizeof(cpu_set_t), &set);
++
++#ifdef TARGET_FREEBSD
++    if (result != 0)
++    {
++        // in FreeBSD 13.2 Jail environment, sched_getaffinity fails due to an implementation bug; fallback to cpuset_getaffinity
++        result = cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, pid == 0 ? -1 : pid, sizeof(cpu_set_t), &set);
++    }
++#endif
++
+     if (result == 0)
+     {
+         int maxCpu = sizeof(intptr_t) * 8;
