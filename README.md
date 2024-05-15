@@ -1,7 +1,7 @@
 # dotnet-freebsd-crossbuild
 Bash script and patches for building dotNET for FreeBSD under Linux
 
-Currently working for: v8.0.204, 7.0.409, 6.0.422, and older (check commits and/or tags if you want to build old versions).
+Currently working for: v8.0.300, 7.0.409, 6.0.422, and older (check commits and/or tags if you want to build old versions).
 Built outside of repo but published here: v9.0.100-preview.3.24204.13
 
 Scripts might require some tweaks. 
