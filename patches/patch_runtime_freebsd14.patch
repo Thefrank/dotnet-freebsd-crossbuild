@@ -15,7 +15,7 @@ index bfa1cc50074b..64d3f9c5cd2e 100644
  #elif HAVE_IOS_NETINET_IP_VAR_H
  #include "ios/netinet/ip_var.h"
  #endif
-+#ifdef (__FreeBSD__)
++#ifdef __FreeBSD__
 +#include <sys/callout.h>
 +#include <sys/osd.h>
 +#endif
