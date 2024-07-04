@@ -1,0 +1,196 @@
+diff --git a/eng/Subsets.props b/eng/Subsets.props
+index 41f63f11bbd79..68569344a6ea0 100644
+--- a/eng/Subsets.props
++++ b/eng/Subsets.props
+@@ -121,7 +121,8 @@
+     <!-- CLR NativeAot only builds in a subset of the matrix -->
+     <_NativeAotSupportedOS Condition="'$(TargetOS)' == 'windows' or '$(TargetOS)' == 'linux' or '$(TargetOS)' == 'osx' or '$(TargetOS)' == 'maccatalyst' or '$(TargetOS)' == 'iossimulator' or '$(TargetOS)' == 'ios' or '$(TargetOS)' == 'tvossimulator' or '$(TargetOS)' == 'tvos' or '$(TargetOS)' == 'freebsd'">true</_NativeAotSupportedOS>
+     <_NativeAotSupportedArch Condition="'$(TargetArchitecture)' == 'x64' or '$(TargetArchitecture)' == 'arm64' or '$(TargetArchitecture)' == 'arm' or ('$(TargetOS)' == 'windows' and '$(TargetArchitecture)' == 'x86')">true</_NativeAotSupportedArch>
+-    <NativeAotSupported Condition="'$(_NativeAotSupportedOS)' == 'true' and $(_NativeAotSupportedArch) == 'true'">true</NativeAotSupported>
++    <NativeAotSupported Condition="'$(_NativeAotSupportedOS)' == 'true' and '$(_NativeAotSupportedArch)' == 'true'">true</NativeAotSupported>
++    <UseNativeAotForComponents Condition="'$(NativeAotSupported)' == 'true' and '$(TargetOS)' == '$(HostOS)' and ('$(TargetOS)' != 'windows' or '$(TargetArchitecture)' != 'x86') and '$(TargetsLinuxBionic)' != 'true' and ('$(TargetsLinuxMusl)' != 'true' or '$(TargetArchitecture)' != 'arm')">true</UseNativeAotForComponents>
+ 
+     <!-- If we're building clr.nativeaotlibs and not building the CLR runtime, compile libraries against NativeAOT CoreLib -->
+     <UseNativeAotCoreLib Condition="'$(TestNativeAot)' == 'true' or ($(_subset.Contains('+clr.nativeaotlibs+')) and !$(_subset.Contains('+clr.native+')) and !$(_subset.Contains('+clr.runtime+')) and !$(_subset.Contains('+clr.corelib+')))">true</UseNativeAotCoreLib>
+@@ -286,7 +287,12 @@
+       AdditionalProperties="%(AdditionalProperties);
+                             ClrCrossComponentsSubset=true;
+                             HostArchitecture=$(BuildArchitecture);
++                            TargetArchitecture=$(TargetArchitecture);
+                             HostCrossOS=$(HostOS);
++                            HostOS=$(HostOS);
++                            TargetOS=$(TargetOS);
++                            RuntimeIdentifier=$(RuntimeIdentifier);
++                            NETCoreSdkPortableRuntimeIdentifier=$(NETCoreSdkPortableRuntimeIdentifier);
+                             PgoInstrument=false;
+                             NoPgoOptimize=true;
+                             CrossBuild=false;
+diff --git a/src/coreclr/tools/aot/ILCompiler/ILCompiler.csproj b/src/coreclr/tools/aot/ILCompiler/ILCompiler.csproj
+index 823dab33c645c..ffab9cbb1289b 100644
+--- a/src/coreclr/tools/aot/ILCompiler/ILCompiler.csproj
++++ b/src/coreclr/tools/aot/ILCompiler/ILCompiler.csproj
+@@ -10,20 +10,15 @@
+   <!-- BEGIN: Workaround for https://github.com/dotnet/runtime/issues/67742 -->
+   <PropertyGroup Condition="'$(BuildingInsideVisualStudio)' != 'true'">
+     <PublishDir>$(RuntimeBinDir)ilc-published/</PublishDir>
+-    <NativeAotSupported Condition="$(OutputRID.StartsWith('tizen')) == 'true'">false</NativeAotSupported>
+-    <NativeAotSupported Condition="$(OutputRID.EndsWith('-arm')) == 'true'">false</NativeAotSupported>
+-    <NativeAotSupported Condition="$(OutputRID.EndsWith('-x86')) == 'true'">false</NativeAotSupported>
+-    <!-- Disable native AOT on FreeBSD when cross building from Linux. -->
+-    <NativeAotSupported Condition="'$(TargetOS)' == 'freebsd' and '$(CrossBuild)' == 'true'">false</NativeAotSupported>
+-    <PublishAot Condition="'$(NativeAotSupported)' == 'true'">true</PublishAot>
+-    <SysRoot Condition="'$(NativeAotSupported)' == 'true' and '$(CrossBuild)' == 'true' and '$(HostOS)' != 'windows'">$(ROOTFS_DIR)</SysRoot>
+-    <PublishReadyToRun Condition="'$(NativeAotSupported)' != 'true'">true</PublishReadyToRun>
+-    <PublishSingleFile Condition="'$(NativeAotSupported)' != 'true'">true</PublishSingleFile>
+-    <PublishTrimmed Condition="'$(NativeAotSupported)' != 'true'">true</PublishTrimmed>
++    <PublishAot Condition="'$(UseNativeAotForComponents)' == 'true'">true</PublishAot>
++    <SysRoot Condition="'$(UseNativeAotForComponents)' == 'true' and '$(CrossBuild)' == 'true' and '$(HostOS)' != 'windows'">$(ROOTFS_DIR)</SysRoot>
++    <PublishReadyToRun Condition="'$(UseNativeAotForComponents)' != 'true'">true</PublishReadyToRun>
++    <PublishSingleFile Condition="'$(UseNativeAotForComponents)' != 'true'">true</PublishSingleFile>
++    <PublishTrimmed Condition="'$(UseNativeAotForComponents)' != 'true'">true</PublishTrimmed>
+     <SuppressGenerateILCompilerExplicitPackageReferenceWarning>true</SuppressGenerateILCompilerExplicitPackageReferenceWarning>
+   </PropertyGroup>
+ 
+-  <ItemGroup Condition="'$(NativeAotSupported)' == 'true'">
++  <ItemGroup Condition="'$(UseNativeAotForComponents)' == 'true'">
+     <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="$(MicrosoftDotNetILCompilerVersion)" />
+     <PackageReference Include="runtime.$(ToolsRID).Microsoft.DotNet.ILCompiler" Version="$(MicrosoftDotNetILCompilerVersion)" />
+   </ItemGroup>
+@@ -53,7 +48,7 @@
+   </Target>
+ 
+   <Target Name="LocateNativeCompiler"
+-          Condition="'$(NativeAotSupported)' == 'true' and '$(HostOS)' != 'windows'"
++          Condition="'$(UseNativeAotForComponents)' == 'true' and '$(HostOS)' != 'windows'"
+           BeforeTargets="SetupOSSpecificProps">
+     <PropertyGroup>
+       <CppCompilerAndLinker Condition="'$(CppCompilerAndLinker)' == ''">clang</CppCompilerAndLinker>
+@@ -75,7 +70,7 @@
+       <_XcodeVersion>$([System.Text.RegularExpressions.Regex]::Match($(_XcodeVersionString), '[1-9]\d*'))</_XcodeVersion>
+     </PropertyGroup>
+ 
+-    <ItemGroup Condition="'$(NativeAotSupported)' == 'true' and '$(_IsApplePlatform)' == 'true'">
++    <ItemGroup Condition="'$(UseNativeAotForComponents)' == 'true' and '$(_IsApplePlatform)' == 'true'">
+       <CustomLinkerArg Condition="'$(_XcodeVersion)' &gt;= '15'" Include="-ld_classic" />
+     </ItemGroup>
+ 
+@@ -86,7 +81,7 @@
+     </PropertyGroup>
+   </Target>
+ 
+-  <ItemGroup Condition="'$(NativeAotSupported)' == 'true'">
++  <ItemGroup Condition="'$(UseNativeAotForComponents)' == 'true'">
+     <CustomLinkerArg Condition="'$(CrossBuild)' == 'true' and '$(BuildArchitecture)' == '$(_targetArchitecture)' and '$(HostOS)' != 'windows' and '$(_IsApplePlatform)' != 'true'" Include="--gcc-toolchain=$(ROOTFS_DIR)/usr" />
+   </ItemGroup>
+ 
+diff --git a/src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj b/src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj
+index 657ac23590a03..14d0fa48fa41d 100644
+--- a/src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj
++++ b/src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj
+@@ -7,11 +7,6 @@
+   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+ 
+   <PropertyGroup>
+-    <NativeAotSupported Condition="$(OutputRID.StartsWith('tizen')) == 'true'">false</NativeAotSupported>
+-    <NativeAotSupported Condition="$(OutputRID.EndsWith('-arm')) == 'true'">false</NativeAotSupported>
+-    <NativeAotSupported Condition="$(OutputRID.EndsWith('-x86')) == 'true'">false</NativeAotSupported>
+-    <!-- Publish crossgen2 as a single-file app on native-OS builds. Cross-OS NativeAOT compilation is not supported yet -->
+-    <NativeAotSupported Condition="'$(CrossBuild)' == 'true' and '$(TargetOS)' != '$(HostOS)'">false</NativeAotSupported>
+     <PublishTrimmed>true</PublishTrimmed>
+     <RuntimeIdentifier>$(PackageRID)</RuntimeIdentifier>
+     <SelfContained>true</SelfContained>
+@@ -21,7 +16,7 @@
+ 
+   <Import Project="crossgen2.props" />
+ 
+-  <PropertyGroup Condition="'$(NativeAotSupported)' != 'true'">
++  <PropertyGroup Condition="'$(UseNativeAotForComponents)' != 'true'">
+     <PublishSingleFile>true</PublishSingleFile>
+     <PublishReadyToRun>true</PublishReadyToRun>
+     <!-- Disable crossgen on NetBSD, illumos, Solaris, and Haiku for now. This can be revisited when we have full support. -->
+@@ -41,7 +36,7 @@
+   <Import Project="$(RepositoryEngineeringDir)targetingpacks.targets" />
+   <Import Project="$(RepositoryEngineeringDir)codeOptimization.targets" />
+ 
+-  <PropertyGroup Condition="'$(NativeAotSupported)' == 'true'">
++  <PropertyGroup Condition="'$(UseNativeAotForComponents)' == 'true'">
+     <IlcToolsPath>$(CoreCLRILCompilerDir)</IlcToolsPath>
+     <IlcToolsPath Condition="'$(CrossBuild)' == 'true' or '$(BuildArchitecture)' != '$(TargetArchitecture)' or '$(EnableNativeSanitizers)' != ''">$(CoreCLRCrossILCompilerDir)</IlcToolsPath>
+     <SysRoot Condition="('$(CrossBuild)' == 'true' or '$(BuildArchitecture)' != '$(TargetArchitecture)') and '$(HostOS)' != 'windows'">$(ROOTFS_DIR)</SysRoot>
+@@ -55,12 +50,12 @@
+     <DsymUtilOptions Condition="'$(_IsApplePlatform)' == 'true'">--flat</DsymUtilOptions>
+   </PropertyGroup>
+ 
+-  <ItemGroup Condition="'$(NativeAotSupported)' == 'true'">
++  <ItemGroup Condition="'$(UseNativeAotForComponents)' == 'true'">
+     <CustomLinkerArg Condition="'$(CrossBuild)' == 'true' and '$(_hostArchitecture)' == '$(_targetArchitecture)' and '$(_IsApplePlatform)' != 'true' and '$(_hostOS)' != 'windows'" Include="--gcc-toolchain=$(ROOTFS_DIR)/usr" />
+   </ItemGroup>
+ 
+   <Import Project="$(CoreCLRBuildIntegrationDir)Microsoft.DotNet.ILCompiler.SingleEntry.targets"
+-          Condition="'$(NativeAotSupported)' == 'true'" />
++          Condition="'$(UseNativeAotForComponents)' == 'true'" />
+   <Import Project="$(RepositoryEngineeringDir)nativeSanitizers.targets" />
+ 
+   <!-- Needed for the amd64 -> amd64 musl cross-build to pass the target flag. -->
+@@ -88,7 +83,7 @@
+   </Target>
+ 
+   <Target Name="LocateNativeCompiler"
+-          Condition="'$(NativeAotSupported)' == 'true' and '$(HostOS)' != 'windows'"
++          Condition="'$(UseNativeAotForComponents)' == 'true' and '$(HostOS)' != 'windows'"
+           BeforeTargets="SetupOSSpecificProps">
+       <PropertyGroup>
+         <CppCompilerAndLinker Condition="'$(CppCompilerAndLinker)' == ''">clang</CppCompilerAndLinker>
+diff --git a/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj b/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj
+index 8d492718edd92..c9d40b79d38db 100644
+--- a/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj
++++ b/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj
+@@ -15,8 +15,6 @@
+     <PermitDllAndExeFilesLackingFileVersion>true</PermitDllAndExeFilesLackingFileVersion>
+     <!-- Publishing as single-file or NativeAOT means we can't examine the interior DLLs -->
+     <ShouldVerifyClosure>false</ShouldVerifyClosure>
+-    <!-- Publish crossgen2 as a single-file app on native-OS builds. Cross-OS NativeAOT compilation is not supported yet -->
+-    <NativeAotSupported Condition="'$(CrossBuild)' == 'true' and '$(TargetOS)' != '$(HostOS)'">false</NativeAotSupported>
+   </PropertyGroup>
+ 
+   <ItemGroup>
+diff --git a/src/native/managed/compile-native.proj b/src/native/managed/compile-native.proj
+index bcda8c5d6b57b..ef7b427944efc 100644
+--- a/src/native/managed/compile-native.proj
++++ b/src/native/managed/compile-native.proj
+@@ -13,26 +13,11 @@
+         <NativeLibsProjectsToBuild Include="$(MSBuildThisFileDirectory)cdacreader/src/cdacreader.csproj" />
+     </ItemGroup>
+ 
+-    <!-- Decide if we're going to do the NativeAOT builds -->
+-    <PropertyGroup>
+-        <!-- disable on Mono, for now -->
+-        <SupportsNativeAotComponents Condition="'$(SupportsNativeAotComponents)' == '' and '$(RuntimeFlavor)' == 'Mono'">false</SupportsNativeAotComponents>
+-        <!-- disable on linux-bionic, for now -->
+-        <SupportsNativeAotComponents Condition="'$(SupportsNativeAotComponents)' == '' and '$(TargetsLinuxBionic)' == 'true'">false</SupportsNativeAotComponents>
+-        <!-- NativeAOT doesn't support cross-OS compilation. disable for crossdac-->
+-        <SupportsNativeAotComponents Condition="'$(SupportsNativeAotComponents)' == '' and '$(HostOS)' != '$(TargetOS)'">false</SupportsNativeAotComponents>
+-        <!-- unsupported targets -->
+-        <SupportsNativeAotComponents Condition="'$(SupportsNativeAotComponents)' == '' and '$(DotNetBuildSourceOnly)' == 'true'">false</SupportsNativeAotComponents>
+-        <SupportsNativeAotComponents Condition="'$(SupportsNativeAotComponents)' == '' and ('$(TargetArchitecture)' == 'arm' or '$(TargetArchitecture)' == 'armel' or '$(TargetArchitecture)' == 'x86' or '$(TargetArchitecture)' == 'riscv64')">false</SupportsNativeAotComponents>
+-        <SupportsNativeAotComponents Condition="'$(SupportsNativeAotComponents)' == '' and ('$(TargetsWindows)' == 'true' or '$(TargetsOSX)' == 'true' or ('$(TargetsLinux)' == 'true' and '$(TargetsAndroid)' != 'true' and '$(TargetsLinuxMusl)' != 'true'))">true</SupportsNativeAotComponents>
+-        <SupportsNativeAotComponents Condition="'$(SupportsNativeAotComponents)' == ''">false</SupportsNativeAotComponents>
+-    </PropertyGroup>
+-
+     <!-- some special kinds of runtime builds need extra NativeAOT flags -->
+     <PropertyGroup>
+         <SysRoot Condition="'$(CrossBuild)' == 'true' and '$(HostOS)' != 'windows'">$(ROOTFS_DIR)</SysRoot>
+         <LinkerFlavor Condition="'$(CrossBuild)' == 'true' and '$(TargetsLinux)' == 'true'">lld</LinkerFlavor>
+-        <CustomLinkerArgToolchainArg Condition="'$(CrossBuild)' == 'true' and '$(_hostArchitecture)' == '$(_targetArchitecture)' and '$(_hostOS)' != 'windows'">--gcc-toolchain=$(ROOTFS_DIR)/usr</CustomLinkerArgToolchainArg>
++        <CustomLinkerArgToolchainArg Condition="'$(CrossBuild)' == 'true' and '$(HostArchitecture)' == '$(TargetArchitecture)' and '$(HostOS)' != 'windows'">--gcc-toolchain=$(ROOTFS_DIR)/usr</CustomLinkerArgToolchainArg>
+     </PropertyGroup>
+ 
+     <ItemGroup>
+@@ -51,6 +36,6 @@
+                           ReferenceOutputAssembly="false"
+                           AdditionalProperties="%(AdditionalProperties);$(SplitSubprojectProps)"
+                           Targets="LinkNative"
+-                          Condition="$(SupportsNativeAotComponents)"/>
++                          Condition="'$(UseNativeAotForComponents)' == 'true'"/>
+     </ItemGroup>
+ </Project>
