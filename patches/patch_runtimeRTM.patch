@@ -136,7 +136,7 @@ index 64ac366ee39..ff96b12b053 100644
 +    <TargetFramework>netcoreapp3.1</TargetFramework>
      <Description>Abstractions for modifying .NET host binaries</Description>
      <IsShipping>false</IsShipping>
-     <IsPackable>true</IsPackable>
+     <IsPackable Condition="'$(PgoInstrument)' == ''">true</IsPackable>
 diff --git a/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj b/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj
 index 4c3c0f82a1a..a4a442013c3 100644
 --- a/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj
