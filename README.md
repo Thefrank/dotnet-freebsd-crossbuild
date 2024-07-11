@@ -7,7 +7,7 @@ As of the June 2024 release of dotNET the SDK and Installer have been merged int
 
 The exception to this is the Y.0.1xx branch. I will be using this going forward
 
-Currently working for: 9.0.100-preview, ~v8.0.300~ 8.0.106, ~7.0.409~ 7.0.120, ~6.0.423~ 6.0.131, and older (check commits and/or tags if you want to build old versions).
+Currently working for: 9.0.100-previewX, ~v8.0.300~ 8.0.106, ~6.0.423~ 6.0.132, and older (check commits and/or tags if you want to build old versions).
 
 Built outside of repo but published here: v9.0.100-preview.3.24204.13
 
@@ -28,7 +28,7 @@ FreeBSD 12.4 (EOL)
 
 FreeBSD 13.2
 - net8 SDK >= 8.0.101
-- net7 SDK >= 7.0.405
+- net7 SDK >= 7.0.405 (EOL June 2024)
 - net6 SDK >= 6.0.418
 
 ## Why would I use this?
