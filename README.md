@@ -11,7 +11,7 @@ Currently working for: 9.0.100-previewX, ~v8.0.300~ 8.0.107, ~6.0.423~ 6.0.132, 
 
 Built outside of repo but published here: v9.0.100-preview.3.24204.13
 
-Scripts might require some tweaks. 
+Scripts might require some tweaks. As an example some dotNET6 backports are officially backported.
 
 If you want a more comprehensive, repo-by-repo script setup:
 @sec also has a (better) native crossgen build that can be found here: https://github.com/sec/dotnet-core-freebsd-source-build
