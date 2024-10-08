@@ -7,7 +7,7 @@ As of the June 2024 release of dotNET the SDK and Installer have been merged int
 
 The exception to this is the Y.0.1xx branch. I will be using this going forward
 
-Currently working for: 9.0.100-rc.1.24452.12, ~v8.0.300~ 8.0.108, ~6.0.423~ 6.0.135 (there was no 6.0.134?), and older (check commits and/or tags if you want to build old versions).
+Currently working for: 9.0.100-rc.1.24452.12, ~v8.0.300~ 8.0.110 (there was no 8.0.109?), ~6.0.423~ 6.0.135 (there was no 6.0.134?), and older (check commits and/or tags if you want to build old versions).
 
 Built outside of repo but published here: v9.0.100-preview.3.24204.13
 
