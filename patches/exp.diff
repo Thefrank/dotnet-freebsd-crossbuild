@@ -1,0 +1,378 @@
+diff --git a/eng/codeOptimization.targets b/eng/codeOptimization.targets
+index e1d81e46c..d42a39e3d 100644
+--- a/eng/codeOptimization.targets
++++ b/eng/codeOptimization.targets
+@@ -27,4 +27,17 @@
+     </PropertyGroup>
+   </Target>
+ 
++  <Target Name="AddReadyToRunPgoOptions" DependsOnTargets="ResolveRuntimeFilesFromLocalBuild" BeforeTargets="ResolveReadyToRunCompilers" Condition="'$(PublishReadyToRun)' == 'true'">
++    <PropertyGroup>
++      <!-- Only use mibc files if UsingToolIbcOptimization is false. Allows enabling/disabling using ibc instead of mibc data -->
++      <IncludeMibcFilesInReadyToRun Condition="'$(UsingToolIbcOptimization)' != 'true' and '$(EnableNgenOptimization)' == 'true' and '$(DotNetBuildFromSource)' != 'true'">true</IncludeMibcFilesInReadyToRun>
++    </PropertyGroup>
++    <ItemGroup>
++      <PublishReadyToRunPgoFiles Condition="'$(IncludeMibcFilesInReadyToRun)' == 'true'" Include="$(CoreCLRArtifactsPath)StandardOptimizationData.mibc"/>
++    </ItemGroup>
++
++    <PropertyGroup Condition="'$(IncludeMibcFilesInReadyToRun)' == 'true'">
++      <PublishReadyToRunCrossgen2ExtraArgs>$(PublishReadyToRunCrossgen2ExtraArgs);--embed-pgo-data</PublishReadyToRunCrossgen2ExtraArgs>
++    </PropertyGroup>
++  </Target>
+ </Project>
+diff --git a/eng/liveBuilds.targets b/eng/liveBuilds.targets
+index 370e19805..3db9c29be 100644
+--- a/eng/liveBuilds.targets
++++ b/eng/liveBuilds.targets
+@@ -23,12 +23,13 @@
+   <!-- Set up artifact subpaths. -->
+   <PropertyGroup>
+     <CoreCLRSharedFrameworkDir>$([MSBuild]::NormalizeDirectory('$(CoreCLRArtifactsPath)', 'sharedFramework'))</CoreCLRSharedFrameworkDir>
+-    <CoreCLRCrossgen2Dir>$([MSBuild]::NormalizeDirectory('$(CoreCLRArtifactsPath)', 'crossgen2'))</CoreCLRCrossgen2Dir>
+     <CoreCLRILCompilerDir>$([MSBuild]::NormalizeDirectory('$(CoreCLRArtifactsPath)', 'ilc-published'))</CoreCLRILCompilerDir>
+     <CoreCLRCrossILCompilerDir Condition="'$(CrossBuild)' == 'true' or '$(BuildArchitecture)' != '$(TargetArchitecture)' or '$(HostOS)' != '$(TargetOS)' or '$(EnableNativeSanitizers)' != ''">$([MSBuild]::NormalizeDirectory('$(CoreCLRArtifactsPath)', '$(BuildArchitecture)', 'ilc'))</CoreCLRCrossILCompilerDir>
+     <CoreCLRAotSdkDir>$([MSBuild]::NormalizeDirectory('$(CoreCLRArtifactsPath)', 'aotsdk'))</CoreCLRAotSdkDir>
+     <CoreCLRBuildIntegrationDir>$([MSBuild]::NormalizeDirectory('$(CoreCLRArtifactsPath)', 'build'))</CoreCLRBuildIntegrationDir>
+ 
++    <Crossgen2Dir>$([MSBuild]::NormalizeDirectory('$(CoreCLRArtifactsPath)', '$(BuildArchitecture)', 'crossgen2'))</Crossgen2Dir>
++
+     <ToolsILLinkDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'ILLink.Tasks', '$(Configuration)'))</ToolsILLinkDir>
+ 
+     <MonoAotCrossDir>$([MSBuild]::NormalizeDirectory('$(MonoArtifactsPath)', 'cross', $(TargetOS)-$(TargetArchitecture.ToLowerInvariant())))</MonoAotCrossDir>
+diff --git a/eng/targetingpacks.targets b/eng/targetingpacks.targets
+index e9ca4e116..59d5163f8 100644
+--- a/eng/targetingpacks.targets
++++ b/eng/targetingpacks.targets
+@@ -7,6 +7,7 @@
+   - MicrosoftNetCoreAppRefPackDir
+   - optional: MicrosoftNetCoreAppRuntimePackDir
+   - optional: AppHostSourcePath & SingleFileHostSourcePath
++  - optional: Crossgen2Dir
+ -->
+ 
+ <Project>
+@@ -152,6 +153,16 @@
+     </ItemGroup>
+   </Target>
+ 
++  <!-- Use local Crossgen2 pack for NetCoreAppCurrent. -->
++  <Target Name="UpdateLocalCrossgen2Pack"
++          Condition="'$(UseLocalCrossgen2Pack)' == 'true' and '$(Crossgen2Dir)' != ''"
++          AfterTargets="ResolveFrameworkReferences">
++    <ItemGroup>
++      <ResolvedCrossgen2Pack PackageDirectory="$(Crossgen2Dir)"
++                             NuGetPackageVersion="$(ProductVersion)" />
++    </ItemGroup>
++  </Target>
++  
+   <!-- Use local app host pack for NetCoreAppCurrent. -->
+   <Target Name="UpdateLocalAppHostPack"
+           Condition="'$(UseLocalAppHostPack)' == 'true'"
+@@ -177,4 +188,16 @@
+                         Condition="'%(RuntimeFramework.FrameworkName)' == '$(LocalFrameworkOverrideName)'" />
+     </ItemGroup>
+   </Target>
++
++  <!-- Update the resolved crossgen2 tool to use the app with the same .NET host as the build instead of the built apphost. -->
++  <Target Name="UpdateLocalCrossgen2Tool"
++          Condition="'$(UseLocalCrossgen2Pack)' == 'true'"
++          AfterTargets="ResolveReadyToRunCompilers">
++    <ItemGroup>
++      <OriginalCrossgen2Tool Include="@(Crossgen2Tool)" Crossgen2Dll="$([System.IO.Path]::ChangeExtension('%(Identity)', '.dll'))" />
++      <Crossgen2Tool Remove="@(Crossgen2Tool)" />
++      <Crossgen2Tool Include="@(OriginalCrossgen2Tool->'%(Crossgen2Dll)')"
++                     DotNetHostPath="$(DotNetTool)" />
++    </ItemGroup>
++  </Target>
+ </Project>
+diff --git a/eng/testing/tests.singlefile.targets b/eng/testing/tests.singlefile.targets
+index 2a0a439dd..c93a8d7e9 100644
+--- a/eng/testing/tests.singlefile.targets
++++ b/eng/testing/tests.singlefile.targets
+@@ -140,19 +140,6 @@
+     </PropertyGroup>
+   </Target>
+ 
+-  <Target Name="__ReplaceCrossgen2ExecutableWithFreshlyBuiltOne"
+-          BeforeTargets="_PrepareForReadyToRunCompilation">
+-    <PropertyGroup>
+-      <Crossgen2ArtifactPath>$(CoreCLRCrossgen2Dir)crossgen2$(ExeSuffix)</Crossgen2ArtifactPath>
+-    </PropertyGroup>
+-
+-    <ItemGroup>
+-      <Crossgen2CurrentTool Include="@(Crossgen2Tool->'$(Crossgen2ArtifactPath)')" />
+-      <Crossgen2Tool Remove="@(Crossgen2Tool)" />
+-      <Crossgen2Tool Include="@(Crossgen2CurrentTool)" />
+-    </ItemGroup>
+-  </Target>
+-
+   <Target Name="PublishTestAsSingleFile"
+           Condition="'$(IsCrossTargetingBuild)' != 'true'"
+           AfterTargets="Build"
+diff --git a/src/coreclr/tools/aot/ILCompiler/ILCompiler.csproj b/src/coreclr/tools/aot/ILCompiler/ILCompiler.csproj
+index c0a239225..7cd142738 100644
+--- a/src/coreclr/tools/aot/ILCompiler/ILCompiler.csproj
++++ b/src/coreclr/tools/aot/ILCompiler/ILCompiler.csproj
+@@ -1,13 +1,16 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+   <PropertyGroup>
+     <OutputPath>$(RuntimeBinDir)ilc/</OutputPath>
+-    <RuntimeIdentifier>$(PackageRID)</RuntimeIdentifier>
++    <RuntimeIdentifier Condition="'$(_IsPublishing)' != 'true'">$(PackageRID)</RuntimeIdentifier>
++    <RuntimeIdentifier Condition="'$(_IsPublishing)' == 'true'">$(OutputRID)</RuntimeIdentifier>
++    <UseLocalTargetingRuntimePack Condition="'$(NativeAotSupported)' != 'true' and '$(CrossBuild)' == 'true' and '$(TargetOS)' != '$(HostOS)' and '$(TargetsMobile)' != 'true'">true</UseLocalTargetingRuntimePack>
+   </PropertyGroup>
+ 
++  <Import Project="$(RepositoryEngineeringDir)targetingpacks.targets" Condition="'$(UseLocalTargetingRuntimePack)' == 'true'" />
++  <Import Project="$(RepositoryEngineeringDir)codeOptimization.targets" Condition="'$(UseLocalTargetingRuntimePack)' == 'true'" />
+   <Import Project="ILCompiler.props" />
+ 
+ 
+-  <!-- BEGIN: Workaround for https://github.com/dotnet/runtime/issues/67742 -->
+   <PropertyGroup Condition="'$(BuildingInsideVisualStudio)' != 'true'">
+     <PublishDir>$(RuntimeBinDir)ilc-published/</PublishDir>
+     <!-- Can't use NativeAOT in source build yet https://github.com/dotnet/runtime/issues/66859 -->
+@@ -17,7 +20,7 @@
+     <NativeAotSupported Condition="'$(TargetOS)' == 'freebsd' and '$(CrossBuild)' == 'true'">false</NativeAotSupported>
+     <PublishAot Condition="'$(NativeAotSupported)' == 'true'">true</PublishAot>
+     <SysRoot Condition="'$(NativeAotSupported)' == 'true' and '$(CrossBuild)' == 'true' and '$(HostOS)' != 'windows'">$(ROOTFS_DIR)</SysRoot>
+-    <PublishReadyToRun Condition="'$(NativeAotSupported)' != 'true'">true</PublishReadyToRun>
++    <PublishReadyToRun Condition="'$(NativeAotSupported)' != 'true' and '$(UseLocalTargetingRuntimePack)' != 'true'">true</PublishReadyToRun>
+     <PublishSingleFile Condition="'$(NativeAotSupported)' != 'true'">true</PublishSingleFile>
+     <PublishTrimmed Condition="'$(NativeAotSupported)' != 'true'">true</PublishTrimmed>
+     <SuppressGenerateILCompilerExplicitPackageReferenceWarning>true</SuppressGenerateILCompilerExplicitPackageReferenceWarning>
+@@ -98,15 +101,5 @@
+   <Target Name="PublishCompiler"
+           Condition="'$(BuildingInsideVisualStudio)' != 'true'"
+           AfterTargets="Build"
+-          DependsOnTargets="Publish;StompSingleFileHostPath" />
+-
+-  <!--  HACK: liveBuilds stomps over SingleFileHostSourcePath, setting it to the host that we just built.
+-        That's unfortunate because it's not the host we're supposed to use here. -->
+-  <Target Name="StompSingleFileHostPath"
+-          BeforeTargets="ResolveFrameworkReferences">
+-    <PropertyGroup>
+-      <SingleFileHostSourcePath></SingleFileHostSourcePath>
+-    </PropertyGroup>
+-  </Target>
+-  <!-- END: Workaround for https://github.com/dotnet/runtime/issues/67742 -->
++          DependsOnTargets="Publish" />
+ </Project>
+diff --git a/src/coreclr/tools/aot/crossgen2/crossgen2.props b/src/coreclr/tools/aot/crossgen2/crossgen2.props
+index 4d5cc30c3..56ed8dd42 100644
+--- a/src/coreclr/tools/aot/crossgen2/crossgen2.props
++++ b/src/coreclr/tools/aot/crossgen2/crossgen2.props
+@@ -45,18 +45,16 @@
+     <TargetArchitectureForSharedLibraries Condition="'$(TargetArchitectureForSharedLibraries)'=='armel'">arm</TargetArchitectureForSharedLibraries>
+ 
+     <JitInterfaceLibraryName>$(LibPrefix)jitinterface_$(TargetArchitectureForSharedLibraries)$(LibSuffix)</JitInterfaceLibraryName>
+-    <!-- This will be provided when using the liveBuild, and unset otherwise. -->
+-    <CoreCLRArtifactsPath Condition="'$(CoreCLRArtifactsPath)' == ''">$(RuntimeBinDir)$(CrossHostArch)</CoreCLRArtifactsPath>
+   </PropertyGroup>
+ 
+   <ItemGroup>
+-    <Content Include="$(CoreCLRArtifactsPath)/$(JitInterfaceLibraryName)"
++    <Content Include="$(CoreCLRArtifactsPath)/$(CrossHostArch)/$(JitInterfaceLibraryName)"
+       CopyToOutputDirectory="PreserveNewest"
+       CopyToPublishDirectory="PreserveNewest"
+       Link="%(FileName)%(Extension)"
+       />
+ 
+-    <Content Include="$(CoreCLRArtifactsPath)/$(LibPrefix)clrjit_*_$(TargetArchitectureForSharedLibraries)$(LibSuffix)"
++    <Content Include="$(CoreCLRArtifactsPath)/$(CrossHostArch)/$(LibPrefix)clrjit_*_$(TargetArchitectureForSharedLibraries)$(LibSuffix)"
+       CopyToOutputDirectory="PreserveNewest"
+       CopyToPublishDirectory="PreserveNewest"
+       Link="%(FileName)%(Extension)"
+diff --git a/src/coreclr/tools/aot/crossgen2/crossgen2_inbuild.csproj b/src/coreclr/tools/aot/crossgen2/crossgen2_inbuild.csproj
+index 75766fd75..2ee5778d9 100644
+--- a/src/coreclr/tools/aot/crossgen2/crossgen2_inbuild.csproj
++++ b/src/coreclr/tools/aot/crossgen2/crossgen2_inbuild.csproj
+@@ -1,8 +1,7 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+   <PropertyGroup>
+     <CrossHostArch Condition="'$(CrossBuild)' == 'true' or '$(TargetArchitecture)' != '$(BuildArchitecture)' or '$(HostOS)' != '$(TargetOS)' or '$(EnableNativeSanitizers)' != ''">$(BuildArchitecture)</CrossHostArch>
+-    <OutputPath>$(RuntimeBinDir)/$(BuildArchitecture)/crossgen2</OutputPath>
+-    <UseAppHost>false</UseAppHost>
++    <OutputPath>$(RuntimeBinDir)/$(BuildArchitecture)/crossgen2/tools</OutputPath>
+     <TargetFramework>$(NetCoreAppToolCurrent)</TargetFramework>
+   </PropertyGroup>
+   <Import Project="crossgen2.props" />
+diff --git a/src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj b/src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj
+index d5105eccf..b13803e89 100644
+--- a/src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj
++++ b/src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj
+@@ -1,4 +1,9 @@
+-<Project>
++<Project DefaultTargets="Publish;PublishItemsOutputGroup">
++  <!-- This project is specifically to build and publish a build of crossgen2 for shipping. -->
++  <PropertyGroup>
++    <_IsPublishing>true</_IsPublishing>
++  </PropertyGroup>
++
+   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+ 
+   <PropertyGroup>
+@@ -6,7 +11,7 @@
+     <NativeAotSupported Condition="'$(DotNetBuildFromSource)' == 'true'">false</NativeAotSupported>
+     <NativeAotSupported Condition="$(OutputRID.StartsWith('tizen')) == 'true'">false</NativeAotSupported>
+     <PublishTrimmed>true</PublishTrimmed>
+-    <RuntimeIdentifiers>$(PackageRID)</RuntimeIdentifiers>
++    <RuntimeIdentifiers>$(OutputRID)</RuntimeIdentifiers>
+     <SelfContained>true</SelfContained>
+     <TargetFramework>$(NetCoreAppCurrent)</TargetFramework>
+     <UseLocalAppHostPack>true</UseLocalAppHostPack>
+@@ -33,6 +38,7 @@
+   </ItemGroup>
+ 
+   <Import Project="$(RepositoryEngineeringDir)targetingpacks.targets" />
++  <Import Project="$(RepositoryEngineeringDir)codeOptimization.targets" />
+ 
+   <PropertyGroup Condition="'$(NativeAotSupported)' == 'true'">
+     <IlcToolsPath>$(CoreCLRILCompilerDir)</IlcToolsPath>
+@@ -52,7 +58,6 @@
+     <CustomLinkerArg Condition="'$(CrossBuild)' == 'true' and '$(_hostArchitecture)' == '$(_targetArchitecture)' and '$(_IsApplePlatform)' != 'true' and '$(_hostOS)' != 'windows'" Include="--gcc-toolchain=$(ROOTFS_DIR)/usr" />
+   </ItemGroup>
+ 
+-  <Import Project="$(R2ROverridePath)" Condition="'$(R2ROverridePath)' != ''" />
+   <Import Project="$(CoreCLRBuildIntegrationDir)Microsoft.DotNet.ILCompiler.SingleEntry.targets"
+           Condition="'$(NativeAotSupported)' == 'true'" />
+   <Import Project="$(RepositoryEngineeringDir)nativeSanitizers.targets" />
+diff --git a/src/installer/pkg/projects/netcoreappRIDs.props b/src/installer/pkg/projects/netcoreappRIDs.props
+index 4c73b3dcb..baa992218 100644
+--- a/src/installer/pkg/projects/netcoreappRIDs.props
++++ b/src/installer/pkg/projects/netcoreappRIDs.props
+@@ -49,7 +49,9 @@
+          built during official builds, however we wish to include them
+          in our runtime.json to enable others to provide them.  -->
+     <UnofficialBuildRID Include="freebsd-x64" />
+-    <UnofficialBuildRID Include="freebsd-arm64" />
++    <UnofficialBuildRID Include="freebsd-arm64" >
++      <Platform>arm64</Platform>
++    </UnofficialBuildRID>
+     <UnofficialBuildRID Include="tizen.4.0.0-armel">
+       <Platform>armel</Platform>
+     </UnofficialBuildRID>
+diff --git a/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj b/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj
+index a95eb81b9..599adf500 100644
+--- a/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj
++++ b/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Crossgen2.sfxproj
+@@ -31,13 +31,6 @@
+   <ItemGroup>
+     <ProjectReference
+       Include="$(RepoRoot)src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj"
+-      AdditionalProperties="_IsPublishing=true
+-        ;RuntimeIdentifier=$(PackageRID)
+-        ;NativeAotSupported=$(NativeAotSupported)
+-        ;CoreCLRArtifactsPath=$(CoreCLRArtifactsPath)
+-        ;ObjCopyName=$(ObjCopyName)
+-        ;R2ROverridePath=$(MSBuildThisFileDirectory)ReadyToRun.targets"
+-      Targets="Publish;PublishItemsOutputGroup"
+       OutputItemType="_RawCrossgenPublishFiles"
+       ReferenceOutputAssembly="false" />
+   </ItemGroup>
+diff --git a/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Runtime.props b/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Runtime.props
+index b9af46ba7..432d1f0de 100644
+--- a/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Runtime.props
++++ b/src/installer/pkg/sfx/Microsoft.NETCore.App/Microsoft.NETCore.App.Runtime.props
+@@ -17,6 +17,7 @@
+     <IncludeWerRelatedKeys>true</IncludeWerRelatedKeys>
+     <IncludeBreadcrumbStoreFolder>true</IncludeBreadcrumbStoreFolder>
+     <MacOSPackageDescription>The .NET Shared Framework</MacOSPackageDescription>
++    <UseLocalCrossgen2Pack>$(PublishReadyToRun)</UseLocalCrossgen2Pack>
+   </PropertyGroup>
+ 
+   <PropertyGroup Condition="'$(BuildNativeAOTRuntimePack)' == 'true'">
+@@ -174,6 +175,8 @@
+   <Import Project="$(Crossgen2SdkOverridePropsPath)" Condition="'$(BuildNativeAOTRuntimePack)' != 'true' and '$(Crossgen2SdkOverridePropsPath)' != ''" />
+   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.SharedFramework.Sdk" />
++  <Import Project="$(RepositoryEngineeringDir)targetingpacks.targets" />
++  <Import Project="$(RepositoryEngineeringDir)codeOptimization.targets" />
+   <Import Project="$(Crossgen2SdkOverrideTargetsPath)" Condition="'$(BuildNativeAOTRuntimePack)' != 'true' and '$(Crossgen2SdkOverrideTargetsPath)' != ''" />
+   <PropertyGroup>
+     <PublishReadyToRunComposite Condition="$(ForcePublishReadyToRunComposite) == 'true'">true</PublishReadyToRunComposite>
+diff --git a/src/installer/pkg/sfx/Microsoft.NETCore.App/ReadyToRun.targets b/src/installer/pkg/sfx/Microsoft.NETCore.App/ReadyToRun.targets
+index 6b24c54f4..436b95b37 100644
+--- a/src/installer/pkg/sfx/Microsoft.NETCore.App/ReadyToRun.targets
++++ b/src/installer/pkg/sfx/Microsoft.NETCore.App/ReadyToRun.targets
+@@ -1,51 +1,16 @@
+ <Project>
+   <Target Name="ResolveReadyToRunCompilers" DependsOnTargets="ResolveRuntimeFilesFromLocalBuild">
+-    <ItemGroup>
+-      <OptimizationMibcFiles Include="$(CoreCLRArtifactsPath)StandardOptimizationData.mibc" Condition="'$(DotNetBuildFromSource)' != 'true'" />
+-    </ItemGroup>
+-
+-    <ItemGroup>
+-      <PublishReadyToRunCrossgen2ExtraArgsList Include="--targetarch:$(TargetArchitecture) --targetos:$(TargetOS)"/>
+-
+-      <!-- Only use mibc files if UsingToolIbcOptimization is false. Allows enabling/disabling using ibc instead of mibc data -->
+-      <PublishReadyToRunCrossgen2ExtraArgsList Condition="'$(UsingToolIbcOptimization)' != 'true' and '$(EnableNgenOptimization)' == 'true'" Include="@(OptimizationMibcFiles->'-m:%(Identity)')"/>
+-      <PublishReadyToRunCrossgen2ExtraArgsList Condition="'$(UsingToolIbcOptimization)' != 'true' and '$(EnableNgenOptimization)' == 'true'" Include="--embed-pgo-data"/>
+-    </ItemGroup>
+-
+-    <!-- The following property group can be simplified once runtime repo switches over to SDK 6.0 drop -->
+     <PropertyGroup>
+-      <Crossgen2Dll>$(CoreCLRArtifactsPath)\$(BuildArchitecture)\crossgen2\crossgen2.dll</Crossgen2Dll>
+-
+-      <PublishReadyToRunUseCrossgen2>true</PublishReadyToRunUseCrossgen2>
+-      <PublishReadyToRunCrossgen2ExtraArgs>@(PublishReadyToRunCrossgen2ExtraArgsList)</PublishReadyToRunCrossgen2ExtraArgs>
++      <Crossgen2Dll>$([MSBuild]::NormalizePath('$(Crossgen2Dir)', 'tools', 'crossgen2.dll'))</Crossgen2Dll>
+       <PublishReadyToRunPerfmapFormatVersion Condition="'$(PublishReadyToRunPerfmapFormatVersion)' == ''">1</PublishReadyToRunPerfmapFormatVersion>
+-
+-      <ScriptExt>.sh</ScriptExt>
+-      <ScriptExt Condition="'$(OS)' == 'Windows_NT'">.cmd</ScriptExt>
+     </PropertyGroup>
+ 
+-    <ItemGroup Condition="'$(RuntimeFlavor)' != 'Mono'">
+-      <_crossTargetJit Include="@(CoreCLRCrossTargetFiles)" Condition="'%(FileName)' == '$(LibPrefix)clrjit' and '%(Extension)' == '$(LibSuffix)'" />
+-      <_clrjit Include="@(RuntimeFiles)" Condition="'%(FileName)' == '$(LibPrefix)clrjit' and '%(Extension)' == '$(LibSuffix)'" />
+-      <_crossTargetCrossgen Include="@(CoreCLRCrossTargetFiles)" Condition="'%(FileName)' == 'crossgen' and '%(Extension)' == '$(ExeSuffix)'" />
+-      <_crossgen Include="@(RuntimeFiles)" Condition="'%(FileName)' == 'crossgen' and '%(Extension)' == '$(ExeSuffix)'" />
+-    </ItemGroup>
+-    <ItemGroup Condition="'@(_crossTargetJit)' != '' and '@(_crossTargetCrossgen)' != ''">
+-      <CrossgenTool Include="@(_crossTargetCrossgen->ClearMetadata())"
+-                    JitPath="@(_crossTargetJit)"
+-                    DiaSymReader="$(_diaSymReaderPath)" />
+-    </ItemGroup>
+-    <ItemGroup Condition="'@(_crossTargetJit)' == '' and '@(_crossTargetCrossgen)' == ''">
+-      <CrossgenTool Include="@(_crossgen->ClearMetadata())"
+-                    JitPath="@(_clrjit)"
+-                    DiaSymReader="$(_diaSymReaderPath)" />
+-    </ItemGroup>
+     <ItemGroup>
+       <Crossgen2Tool Include="$(Crossgen2Dll)"
+                      TargetArch="$(TargetArchitecture)"
+                      TargetOS="$(TargetOS)"
+-                     DotNetHostPath="$(RepoRoot)/dotnet$(ScriptExt)"
++                     DotNetHostPath="$(DotNetTool)"
+                      PerfmapFormatVersion="$(PublishReadyToRunPerfmapFormatVersion)"/>
+     </ItemGroup>
+   </Target>
+-</Project>
++</Project>
+\ No newline at end of file
+diff --git a/src/libraries/System.Runtime.InteropServices/tests/TestAssets/NativeExports/NativeExports.csproj b/src/libraries/System.Runtime.InteropServices/tests/TestAssets/NativeExports/NativeExports.csproj
+index 7c5b7e09b..3daf1f99f 100644
+--- a/src/libraries/System.Runtime.InteropServices/tests/TestAssets/NativeExports/NativeExports.csproj
++++ b/src/libraries/System.Runtime.InteropServices/tests/TestAssets/NativeExports/NativeExports.csproj
+@@ -23,16 +23,11 @@
+     <Compile Include="$(CommonPath)DisableRuntimeMarshalling.cs" Link="Common\DisableRuntimeMarshalling.cs" />
+   </ItemGroup>
+ 
+-  <!-- Until we use the live app host, use a prebuilt from the 7.0 SDK.
++  <!-- Until we use the live app host, use a prebuilt from the SDK.
+        Issue: https://github.com/dotnet/runtime/issues/58109. -->
+-  <ItemGroup Condition="'$(UseLocalAppHostPack)' != 'true'">
+-    <KnownAppHostPack Include="Microsoft.NETCore.App"
+-                      ExcludedRuntimeIdentifiers="android"
+-                      AppHostPackNamePattern="Microsoft.NETCore.App.Host.**RID**"
+-                      AppHostPackVersion="7.0.0"
+-                      AppHostRuntimeIdentifiers="linux-arm;linux-arm64;linux-musl-arm64;linux-musl-x64;linux-x64;osx-x64;rhel.6-x64;tizen.4.0.0-armel;tizen.5.0.0-armel;win-arm64;win-x64;win-x86;linux-musl-arm;osx-arm64;linux-s390x;linux-bionic-arm;linux-bionic-arm64;linux-bionic-x64;linux-bionic-x86"
+-                      TargetFramework="$(NetCoreAppCurrent)"
+-                      Condition="'@(KnownAppHostPack)' == '' or !@(KnownAppHostPack->AnyHaveMetadataValue('TargetFramework', '$(NetCoreAppCurrent)'))" />
++  <ItemGroup Condition="'$(UseLocalAppHostPack)' != 'true' and '$(NetCoreAppToolCurrent)' != '$(NetCoreAppCurrent)'">
++    <KnownAppHostPack Include="@(KnownAppHostPack->WithMetadataValue('Identity', 'Microsoft.NETCore.App')->WithMetadataValue('TargetFramework', '$(NetCoreAppToolCurrent)'))"
++                      TargetFramework="$(NetCoreAppCurrent)" />
+   </ItemGroup>
+ 
+   <ItemGroup>
