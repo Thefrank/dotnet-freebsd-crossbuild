@@ -1,0 +1,74 @@
+diff --git a/eng/pipelines/runtime.yml b/eng/pipelines/runtime.yml
+index 2e68a43af..5b300e23b 100644
+--- a/eng/pipelines/runtime.yml
++++ b/eng/pipelines/runtime.yml
+@@ -519,8 +519,11 @@ extends:
+           jobParameters:
+             testScope: innerloop
+             nameSuffix: CoreCLR
+-            buildArgs: -s clr+libs+host+packs -c $(_BuildConfig) -rc Checked
++            buildArgs: -s clr+libs+host+packs -c $(_BuildConfig) -rc Checked -p:NativeAotSupported=false
+             timeoutInMinutes: 120
++            postBuildSteps:
++              - script: $(Build.SourcesDirectory)/build$(scriptExt) ${{ variables.debugOnPrReleaseOnRolling }} -s clr.tools+packs -c $(_BuildConfig) -rc Checked -cross -os freebsd
++                displayName: Build clr.tools and packs
+             condition: >-
+               or(
+                 eq(stageDependencies.EvaluatePaths.evaluate_paths.outputs['SetPathVars_coreclr.containsChange'], true),
+diff --git a/src/coreclr/tools/aot/ILCompiler/ILCompiler.csproj b/src/coreclr/tools/aot/ILCompiler/ILCompiler.csproj
+index fad922947..ea488bf47 100644
+--- a/src/coreclr/tools/aot/ILCompiler/ILCompiler.csproj
++++ b/src/coreclr/tools/aot/ILCompiler/ILCompiler.csproj
+@@ -1,9 +1,14 @@
+ <Project Sdk="Microsoft.NET.Sdk">
+   <PropertyGroup>
+     <OutputPath>$(RuntimeBinDir)ilc/</OutputPath>
+-    <RuntimeIdentifier>$(PackageRID)</RuntimeIdentifier>
++    <RuntimeIdentifier Condition="'$(_IsPublishing)' != 'true'">$(PackageRID)</RuntimeIdentifier>
++    <RuntimeIdentifier Condition="'$(_IsPublishing)' == 'true'">$(OutputRID)</RuntimeIdentifier>
++    <UseLocalTargetingRuntimePack Condition="'$(UseNativeAotForComponents)' != 'true' and '$(CrossBuild)' == 'true' and '$(TargetOS)' != '$(HostOS)' and '$(TargetsMobile)' != 'true'">true</UseLocalTargetingRuntimePack>
+   </PropertyGroup>
+ 
++  <Import Project="$(RepositoryEngineeringDir)targetingpacks.targets" Condition="'$(UseLocalTargetingRuntimePack)' == 'true'" />
++  <Import Project="$(RepositoryEngineeringDir)codeOptimization.targets" Condition="'$(UseLocalTargetingRuntimePack)' == 'true'" />
++
+   <Import Project="ILCompiler.props" />
+ 
+ 
+@@ -11,7 +16,7 @@
+   <PropertyGroup Condition="'$(BuildingInsideVisualStudio)' != 'true'">
+     <PublishDir>$(RuntimeBinDir)ilc-published/</PublishDir>
+     <PublishAot Condition="'$(UseNativeAotForComponents)' == 'true'">true</PublishAot>
+-    <PublishReadyToRun Condition="'$(UseNativeAotForComponents)' != 'true'">true</PublishReadyToRun>
++    <PublishReadyToRun Condition="'$(UseNativeAotForComponents)' != 'true' and '$(UseLocalTargetingRuntimePack)' != 'true'">true</PublishReadyToRun>
+     <PublishSingleFile Condition="'$(UseNativeAotForComponents)' != 'true'">true</PublishSingleFile>
+     <PublishTrimmed Condition="'$(UseNativeAotForComponents)' != 'true'">true</PublishTrimmed>
+   </PropertyGroup>
+diff --git a/src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj b/src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj
+index c7041857e..1bdb473da 100644
+--- a/src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj
++++ b/src/coreclr/tools/aot/crossgen2/crossgen2_publish.csproj
+@@ -2,7 +2,7 @@
+   <!-- This project is publishes a self-contained copy of crossgen2. -->
+   <PropertyGroup>
+     <_IsPublishing>true</_IsPublishing>
+-    <RuntimeIdentifier>$(PackageRID)</RuntimeIdentifier>
++    <RuntimeIdentifier>$(OutputRID)</RuntimeIdentifier>
+     <PublishDir>$(RuntimeBinDir)crossgen2-published/</PublishDir>
+     <SelfContained>true</SelfContained>
+     <PublishTrimmed>true</PublishTrimmed>
+diff --git a/src/installer/pkg/projects/netcoreappRIDs.props b/src/installer/pkg/projects/netcoreappRIDs.props
+index 6c8484169..b75b0381b 100644
+--- a/src/installer/pkg/projects/netcoreappRIDs.props
++++ b/src/installer/pkg/projects/netcoreappRIDs.props
+@@ -50,7 +50,9 @@
+          built during official builds, however we wish to include them
+          in our runtime.json to enable others to provide them.  -->
+     <UnofficialBuildRID Include="freebsd-x64" />
+-    <UnofficialBuildRID Include="freebsd-arm64" />
++    <UnofficialBuildRID Include="freebsd-arm64">
++      <Platform>arm64</Platform>
++    </UnofficialBuildRID>
+     <UnofficialBuildRID Include="tizen.4.0.0-armel">
+       <Platform>armel</Platform>
+     </UnofficialBuildRID>
