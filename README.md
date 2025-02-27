@@ -1,24 +1,27 @@
 # dotnet-freebsd-crossbuild
-Bash script and patches for building dotNET for FreeBSD under Linux
+Bash script and patches for building dotNET for FreeBSD under Linux.
+Yes. This needs an overhaul.
 
 ## NOTE(S)
 
-As of the June 2024 release of dotNET the SDK and Installer have been merged into a single repo making building much harder.
-
-The exception to this is the Y.0.1xx branch. I will be using this going forward
+The Y.0.1xx branch is used for net8 and net9 due to a merging of the `sdk` and `installer` repos.
 
 Currently working for: 
-v9.0.103 (SDK version != runtime version. Ask Microsoft why they are disjointed), 
-~v8.0.300~ 8.0.113 (there was no 8.0.109?), 
-~6.0.423~ 6.0.136 (there was no 6.0.134?), and older (check commits and/or tags if you want to build old versions).
 
-Built outside of repo but published here: v9.0.100-preview.3.24204.13
+- v9.0.103 (SDK version != runtime version. Ask Microsoft why they are disjointed), 
+
+- ~v8.0.300~ 8.0.113 (there was no 8.0.109?), 
+
+- ~6.0.423~ 6.0.136 (there was no 6.0.134?), and older (check commits and/or tags if you want to build old versions).
+
+Built outside of repo but published here: v9.0.100-preview.3.24204.13, v10.0.100-preview.1.25120.13 (script needs updates)
+
 
 Scripts might require some tweaks. As an example some dotNET6 backports are officially backported.
 
-If you want a more comprehensive, repo-by-repo script setup:
+If you want a more comprehensive, repo-by-repo script setup: 
 @sec also has a (better) native crossgen build that can be found here: https://github.com/sec/dotnet-core-freebsd-source-build
-
+The SDK is also in FreeBSD ports. You can just `pkg install dotnet`
 
 ## What is here?
 
