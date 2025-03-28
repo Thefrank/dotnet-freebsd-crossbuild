@@ -14,7 +14,7 @@ Currently working for:
 
 - ~6.0.423~ 6.0.136 (there was no 6.0.134?), and older (check commits and/or tags if you want to build old versions).
 
-Built outside of repo but published here: v9.0.100-preview.3.24204.13, v10.0.100-preview.1.25120.13 (script needs updates)
+Built outside of repo but published here: v9.0.100-preview.3.24204.13, v10.0.100-preview.1.25120.13, v10.0.100-preview.2.25164.34 (script needs updates)
 
 
 Scripts might require some tweaks. As an example some dotNET6 backports are officially backported.
