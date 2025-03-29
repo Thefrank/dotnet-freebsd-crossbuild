@@ -1,0 +1,13 @@
+diff --git a/Directory.Build.props b/Directory.Build.props
+index 19d712c6..6d0131d5 100644
+--- a/Directory.Build.props
++++ b/Directory.Build.props
+@@ -28,7 +28,7 @@
+     <HostRid Condition="'$(HostRid)' == '' and '$(MSBuildRuntimeType)' == 'core'">$([System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier)</HostRid>
+     <HostRid Condition="'$(HostRid)' == '' and '$(MSBuildRuntimeType)' != 'core'">win-$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant)</HostRid>
+ 
+-    <IsLinux Condition="$([MSBuild]::IsOSPlatform('LINUX'))">true</IsLinux>
++    <IsLinux Condition="$([MSBuild]::IsOSPlatform('LINUX')) AND ('$(OSName)' == '' OR '$(OSName)' == 'linux') ">True</IsLinux>
+     <HostOSName Condition="'$(HostOSName)' == '' AND $([MSBuild]::IsOSPlatform('WINDOWS'))">win</HostOSName>
+     <HostOSName Condition="'$(HostOSName)' == '' AND $([MSBuild]::IsOSPlatform('OSX'))">osx</HostOSName>
+     <HostOSName Condition="'$(HostOSName)' == '' AND $([MSBuild]::IsOSPlatform('FREEBSD'))">freebsd</HostOSName>
