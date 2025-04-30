@@ -1,11 +1,11 @@
 diff --git a/Directory.Build.props b/Directory.Build.props
-index 19d712c6..6d0131d5 100644
+index 90c1bfc900..7ddd0e0ae1 100644
 --- a/Directory.Build.props
 +++ b/Directory.Build.props
-@@ -28,7 +28,7 @@
-  <Import Project="$(RepositoryEngineeringDir)Analyzers.props" />
-
-  <PropertyGroup>
+@@ -16,7 +16,7 @@
+   <Import Project="$(RepositoryEngineeringDir)Analyzers.props" />
+ 
+   <PropertyGroup>
 -    <IsLinux Condition="$([MSBuild]::IsOSPlatform('LINUX'))">true</IsLinux>
 +    <IsLinux Condition="$([MSBuild]::IsOSPlatform('LINUX')) AND ('$(OSName)' == '' OR '$(OSName)' == 'linux') ">True</IsLinux>
      <HostOSName Condition="'$(HostOSName)' == '' AND $([MSBuild]::IsOSPlatform('WINDOWS'))">win</HostOSName>
