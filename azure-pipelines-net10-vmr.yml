@@ -93,7 +93,7 @@ stages:
             echo "##vso[build.updatebuildnumber]${TAG/\//-}-${{ parameters.containerCrossOS }}-freebsd-${{ parameters.containerCrossOSVersion }}-run-${RUNCOUNTER}"
             echo "Building ${{ parameters.vmrTag }}-${{ parameters.containerCrossOS }}-freebsd-${{ parameters.containerCrossOSVersion }}"
           displayName: Set Build Name
-  - stage: VMR
+  - stage: dotnet
     dependsOn: [Setup]
     jobs:
       - job: Build
