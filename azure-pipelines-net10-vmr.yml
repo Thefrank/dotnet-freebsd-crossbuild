@@ -63,6 +63,11 @@ resources:
     ref: refs/tags/${{ parameters.vmrTag }}
     endpoint: Thefrank
     name: dotnet/dotnet
+  - repository: crossbuild
+    type: github
+    endpoint: Thefrank
+    name: Thefrank/dotnet-freebsd-crossbuild
+    ref: main
 
 trigger: none
 
