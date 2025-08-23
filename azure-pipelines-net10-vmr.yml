@@ -99,7 +99,7 @@ stages:
       - job: Build
         timeoutInMinutes: 240
         workspace:
-          clean: all
+          clean: outputs
         steps:
           - checkout: crossbuild
           - checkout: dotnet
