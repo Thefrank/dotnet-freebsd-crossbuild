@@ -1,0 +1,156 @@
+parameters:
+- name: containerCrossOS
+  displayName: ARCH of container to use
+  type: string
+  default: amd64
+  values:
+    - amd64
+    - arm64
+- name: containerCrossOSVersion
+  displayName: OS Version
+  type: string
+  default: 14
+  values:
+    - 13
+    - 14
+- name: buildType
+  displayName: Type of build (Release/Debug)
+  type: string
+  default: Release
+  values:
+    - Release
+    - Debug
+- name: vmrTag
+  displayName: Tag for dotnet/dotnet Repo (VMR)
+  type: string
+  default: v10.0.100-preview.7.25380.108
+- name: publishSHA
+  displayName: SHA to use for update on GH
+  type: string
+  default: aea3aea83ac7bd11936717643b6c84fa54dd62f1
+- name: publishLogs
+  displayName: Publish logs (to artifacts)?
+  type: boolean
+  default: true
+- name: publishBuild
+  displayName: Publish Build to Github?
+  type: boolean
+  default: false
+- name: publishNuGet
+  displayName: Publish to NuGet feeds?
+  type: boolean
+  default: false
+- name: cleanRepo
+  displayName: Clean repo on success
+  type: boolean
+  default: true
+#/p:BuildNativeAOTRuntimePack=true for NativeAOT NuGet
+# -rf mono for mono
+- name: extraParameters
+  displayName: Extra parameters to pass to build
+  type: string
+  default: ' '
+
+pool:
+  name: Default
+  demands: 
+  - agent.os -equals Linux
+
+resources:
+  repositories:
+  - repository: dotnet
+    type: github
+    ref: refs/tags/${{ parameters.vmrTag }}
+    endpoint: Thefrank
+    name: dotnet/dotnet
+
+trigger: none
+
+variables:
+- name: runCounter 
+  value: $[counter('runNumber', 1)]
+- name: ROOTFSARCH 
+  value:  ${{ replace(split(parameters.containerCrossOS, '-')[0],'amd64','x64') }}
+- name: DOTNETDOCKERCONTAINERUSED
+  value:
+
+stages:
+  - stage: Setup
+    dependsOn: []
+    jobs:
+      - job: init
+        timeoutInMinutes: 30
+        workspace:
+          clean: all
+        steps:
+        - bash: |
+            TAG=${{ parameters.vmrTag }}
+            echo "##vso[build.updatebuildnumber]${TAG/\//-}-${{ parameters.containerCrossOS }}-freebsd-${{ parameters.containerCrossOSVersion }}-run-${RUNCOUNTER}"
+            echo "Building ${{ parameters.vmrTag }}-${{ parameters.containerCrossOS }}-freebsd-${{ parameters.containerCrossOSVersion }}"
+          displayName: Set Build Name
+  - stage: VMR
+    dependsOn: [Setup]
+    jobs:
+      - job: Build
+        timeoutInMinutes: 240
+        workspace:
+          clean: all
+        steps:
+          - checkout: crossbuild
+          - checkout: dotnet
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                set -e
+                git -C '$(System.StageDisplayName)' checkout tags/${{ parameters.vmrTag }}
+            displayName: Double Check Branch
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "##vso[task.setvariable variable=DOTNETDOCKERCONTAINERUSED]$(echo "mcr.microsoft.com/dotnet-buildtools/prereqs:$(curl -s https://raw.githubusercontent.com/dotnet/versions/master/build-info/docker/image-info.dotnet-dotnet-buildtools-prereqs-docker-main.json | jq -r '.repos[0].images[] | select(.platforms[0].simpleTags[0] | contains("freebsd-${{ parameters.containerCrossOSVersion }}-${{ parameters.containerCrossOS }}")) | .platforms[0].simpleTags[0]')" head -1)"
+            displayName: Setup Container
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo Pulling $DOTNETDOCKERCONTAINERUSED
+                docker image pull $DOTNETDOCKERCONTAINERUSED
+            displayName: Pull Container
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                set -e
+                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -v ${BUILD_SOURCESDIRECTORY}/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED /dotnet/build.sh -c ${{ parameters.buildType }} -os freebsd -arch $ROOTFSARCH -ci -p:SkipUsingCrossgen=true ${{ parameters.extraParameters }}
+            displayName: Build $(System.StageDisplayName)
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: '$(Build.SourcesDirectory)/$(System.StageDisplayName)/artifacts/assets'
+              artifact: '$(System.StageDisplayName)Asssets'
+              publishLocation: 'pipeline'
+            displayName: Publish $(System.StageDisplayName) Assets
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: '$(Build.SourcesDirectory)/$(System.StageDisplayName)/artifacts/Release/Shipping/runtime/'
+              artifact: '$(System.StageDisplayName)RuntimePackages '
+              publishLocation: 'pipeline'
+            displayName: Publish $(System.StageDisplayName) Runtime Packages
+          - task: PublishPipelineArtifact@1
+            condition: eq('${{ parameters.publishLogs }}', 'true')
+            inputs:
+              targetPath: '$(Build.SourcesDirectory)/$(System.StageDisplayName)/artifacts/log'
+              artifact: '$(System.StageDisplayName)Logs-$(runCounter)'
+              publishLocation: 'pipeline'
+            displayName: Publish $(System.StageDisplayName) Logs
+          - task: Bash@3
+            condition: succeededOrFailed()
+            inputs:
+              targetType: 'inline'
+              script: |
+                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -v ${BUILD_SOURCESDIRECTORY}/runtime:/runtime $DOTNETDOCKERCONTAINERUSED /runtime/build.sh --clean
+                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -v ${BUILD_SOURCESDIRECTORY}/runtime:/runtime $DOTNETDOCKERCONTAINERUSED /bin/bash -c "git config --global --add safe.directory /runtime && git -C /runtime clean -ffdx"
+                docker system prune --all --force --filter "until=720h"
+                docker volume prune --all --force
+            displayName: Clean Up Docker and $(System.StageDisplayName)
