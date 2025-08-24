@@ -128,7 +128,7 @@ stages:
               targetType: 'inline'
               script: |
                 set -e
-                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -v ${BUILD_SOURCESDIRECTORY}/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED /dotnet/build.sh -c ${{ parameters.buildType }} -os freebsd -arch $ROOTFSARCH -ci --clean-while-building -p:SkipUsingCrossgen=true ${{ parameters.extraParameters }}
+                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED ./build.sh -c ${{ parameters.buildType }} -os freebsd -arch $ROOTFSARCH -ci --clean-while-building -sb -p:SkipUsingCrossgen=true ${{ parameters.extraParameters }}
             displayName: Build $(System.StageDisplayName)
           - task: PublishPipelineArtifact@1
             inputs:
@@ -154,8 +154,8 @@ stages:
             inputs:
               targetType: 'inline'
               script: |
-                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -v ${BUILD_SOURCESDIRECTORY}/runtime:/runtime $DOTNETDOCKERCONTAINERUSED /runtime/build.sh --clean
-                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -v ${BUILD_SOURCESDIRECTORY}/runtime:/runtime $DOTNETDOCKERCONTAINERUSED /bin/bash -c "git config --global --add safe.directory /runtime && git -C /runtime clean -ffdx"
+                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED ./build.sh --clean
+                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED /bin/bash -c "git config --global --add safe.directory /dotnet && git -C /dotnet clean -ffdx"
                 docker system prune --all --force --filter "until=720h"
                 docker volume prune --all --force
             displayName: Clean Up Docker and $(System.StageDisplayName)
