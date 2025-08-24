@@ -128,7 +128,7 @@ stages:
               targetType: 'inline'
               script: |
                 set -e
-                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED ./build.sh -c ${{ parameters.buildType }} -os freebsd -arch $ROOTFSARCH -ci --clean-while-building -sb -p:SkipUsingCrossgen=true ${{ parameters.extraParameters }}
+                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED  sh -c './prep-source-build.sh && ./build.sh -c ${{ parameters.buildType }} -os freebsd -arch $ROOTFSARCH -ci --clean-while-building -sb -p:SkipUsingCrossgen=true ${{ parameters.extraParameters }}'
             displayName: Build $(System.StageDisplayName)
           - task: PublishPipelineArtifact@1
             inputs:
