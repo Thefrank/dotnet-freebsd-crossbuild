@@ -129,7 +129,15 @@ stages:
               targetType: 'inline'
               script: |
                 set -e
-                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED  ./build.sh --prep --configuration  ${{ parameters.buildType }} --ci --target-os freebsd --target-arch $ROOTFSARCH --target-rid freebsd-x64 --source-build --clean-while-building -p:PortableBuild=true -p:PortableTargetRid=freebsd-x64 -p:CrossBuild=true -p:SkipUsingCrossgen=true ${{ parameters.extraParameters }}
+                curl https://github.com/dotnet/dotnet/releases/download/${{ parameters.vmrTag }}/release.json -o release.json
+              workingDirectory: '$(Build.SourcesDirectory)/$(System.StageDisplayName)/'
+            displayName: Fetch Release Json
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                set -e
+                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED  ./build.sh --prep --configuration  ${{ parameters.buildType }} --ci --target-os freebsd --target-arch $ROOTFSARCH --target-rid freebsd-x64 --source-build --clean-while-building --release-manifest release.json -p:PortableBuild=true -p:PortableTargetRid=freebsd-x64 -p:CrossBuild=true -p:SkipUsingCrossgen=true ${{ parameters.extraParameters }}
             displayName: Build $(System.StageDisplayName)
           - task: PublishPipelineArtifact@1
             inputs:
@@ -139,10 +147,10 @@ stages:
             displayName: Publish $(System.StageDisplayName) Assets
           - task: PublishPipelineArtifact@1
             inputs:
-              targetPath: '$(Build.SourcesDirectory)/$(System.StageDisplayName)/artifacts/Release/Shipping/runtime/'
-              artifact: '$(System.StageDisplayName)RuntimePackages '
+              targetPath: '$(Build.SourcesDirectory)/$(System.StageDisplayName)/artifacts/packages'
+              artifact: '$(System.StageDisplayName)Packages '
               publishLocation: 'pipeline'
-            displayName: Publish $(System.StageDisplayName) Runtime Packages
+            displayName: Publish $(System.StageDisplayName) Packages
           - task: PublishPipelineArtifact@1
             condition: eq('${{ parameters.publishLogs }}', 'true')
             inputs:
