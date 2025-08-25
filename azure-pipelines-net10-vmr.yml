@@ -139,7 +139,7 @@ stages:
               script: |
                 set -e
                 BUILDID=$(curl -L https://github.com/dotnet/dotnet/releases/download/${{ parameters.vmrTag }}/release.json | jq -r ".officialBuildId")
-                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED  ./build.sh --prep --configuration  ${{ parameters.buildType }} --ci --target-os freebsd --target-arch $ROOTFSARCH --target-rid freebsd-x64 --source-build --clean-while-building --official-build-id=$BUILDID -p:PortableBuild=true -p:PortableTargetRid=freebsd-x64 -p:CrossBuild=true -p:SkipUsingCrossgen=true ${{ parameters.extraParameters }}
+                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED  ./build.sh --prep --configuration  ${{ parameters.buildType }} --ci --target-os freebsd --target-arch $ROOTFSARCH --target-rid freebsd-x64 --source-build --clean-while-building --official-build-id $BUILDID -p:PortableBuild=true -p:PortableTargetRid=freebsd-x64 -p:CrossBuild=true -p:SkipUsingCrossgen=true ${{ parameters.extraParameters }}
             displayName: Build $(System.StageDisplayName)
           - task: PublishPipelineArtifact@1
             inputs:
