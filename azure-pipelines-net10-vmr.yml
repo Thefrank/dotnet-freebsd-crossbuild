@@ -124,20 +124,22 @@ stages:
                 docker image pull $DOTNETDOCKERCONTAINERUSED
                 echo Target Arch is $ROOTFSARCH
             displayName: Pull Container
+          # Only needed for tarball add --release-manifest release.json on build
+          # - task: Bash@3
+          #   inputs:
+          #     targetType: 'inline'
+          #     script: |
+          #       set -e
+          #       curl -L https://github.com/dotnet/dotnet/releases/download/${{ parameters.vmrTag }}/release.json
+          #     workingDirectory: '$(Build.SourcesDirectory)/$(System.StageDisplayName)/'
+          #   displayName: Fetch Release Json
           - task: Bash@3
             inputs:
               targetType: 'inline'
               script: |
                 set -e
-                curl https://github.com/dotnet/dotnet/releases/download/${{ parameters.vmrTag }}/release.json -o release.json
-              workingDirectory: '$(Build.SourcesDirectory)/$(System.StageDisplayName)/'
-            displayName: Fetch Release Json
-          - task: Bash@3
-            inputs:
-              targetType: 'inline'
-              script: |
-                set -e
-                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED  ./build.sh --prep --configuration  ${{ parameters.buildType }} --ci --target-os freebsd --target-arch $ROOTFSARCH --target-rid freebsd-x64 --source-build --clean-while-building --release-manifest release.json -p:PortableBuild=true -p:PortableTargetRid=freebsd-x64 -p:CrossBuild=true -p:SkipUsingCrossgen=true ${{ parameters.extraParameters }}
+                BUILDID=$(curl -L https://github.com/dotnet/dotnet/releases/download/${{ parameters.vmrTag }}/release.json | jq -r ".officialBuildId")
+                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED  ./build.sh --prep --configuration  ${{ parameters.buildType }} --ci --target-os freebsd --target-arch $ROOTFSARCH --target-rid freebsd-x64 --source-build --clean-while-building --official-build-id=$BUILDID -p:PortableBuild=true -p:PortableTargetRid=freebsd-x64 -p:CrossBuild=true -p:SkipUsingCrossgen=true ${{ parameters.extraParameters }}
             displayName: Build $(System.StageDisplayName)
           - task: PublishPipelineArtifact@1
             inputs:
