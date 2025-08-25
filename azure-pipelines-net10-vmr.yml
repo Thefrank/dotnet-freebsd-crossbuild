@@ -27,7 +27,7 @@ parameters:
 - name: publishSHA
   displayName: SHA to use for update on GH
   type: string
-  default: aea3aea83ac7bd11936717643b6c84fa54dd62f1
+  default: e500908d4e39e0a6be257d35eab0b8fe36cd6e75
 - name: publishLogs
   displayName: Publish logs (to artifacts)?
   type: boolean
