@@ -16,6 +16,8 @@ Currently working for:
 
 Built outside of repo but published here: v9.0.100-preview.3.24204.13, v10.0.100-preview.1.25120.13, v10.0.100-preview.2.25164.34, v10.0.100-preview.3.25201.16, v10.0.100-preview.5.25277.114 (script needs updates)
 
+VMR as of net10p7 the VMR fully supports crossbuilds!
+
 
 Scripts might require some tweaks. As an example some dotNET6 backports are officially backported.
 
