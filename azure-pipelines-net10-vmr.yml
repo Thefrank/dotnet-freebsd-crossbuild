@@ -44,8 +44,7 @@ parameters:
   displayName: Clean repo on success
   type: boolean
   default: true
-#/p:BuildNativeAOTRuntimePack=true for NativeAOT NuGet
-# -rf mono for mono
+#-p:KeepNativeSymbols=false for for smaller sizes
 - name: extraParameters
   displayName: Extra parameters to pass to build
   type: string
@@ -139,7 +138,7 @@ stages:
               script: |
                 set -e
                 BUILDID=$(curl -L https://github.com/dotnet/dotnet/releases/download/${{ parameters.vmrTag }}/release.json | jq -r ".officialBuildId")
-                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED  ./build.sh --prep --configuration  ${{ parameters.buildType }} --ci --target-os freebsd --target-arch $ROOTFSARCH --target-rid freebsd-x64 --source-build --clean-while-building --official-build-id $BUILDID -p:PortableBuild=true -p:PortableTargetRid=freebsd-x64 -p:CrossBuild=true -p:SkipUsingCrossgen=true ${{ parameters.extraParameters }}
+                docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED  ./build.sh --prep --configuration  ${{ parameters.buildType }} --ci --target-os freebsd --target-arch $ROOTFSARCH --target-rid freebsd-x64 --source-build --clean-while-building --official-build-id $BUILDID -p:PortableBuild=true -p:PortableTargetRid=freebsd-x64 -p:CrossBuild=true -p:SkipUsingCrossgen=true -p:BundleCrossgen2=true ${{ parameters.extraParameters }}
             displayName: Build $(System.StageDisplayName)
           - task: PublishPipelineArtifact@1
             inputs:
@@ -170,3 +169,127 @@ stages:
                 docker system prune --all --force --filter "until=720h"
                 docker volume prune --all --force
             displayName: Clean Up Docker and $(System.StageDisplayName)
+  - stage: publishgithub
+    dependsOn: [dotnet]
+    condition: and(succeeded(),eq('${{ parameters.publishBuild }}', 'true'))
+    jobs:
+      - job: Build
+        timeoutInMinutes: 120
+        workspace:
+          clean: all
+        steps:
+          - checkout: self
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              buildType: 'current'
+              itemPattern: '**/*freebsd*'
+              targetPath: '$(Pipeline.Workspace)/a'
+            displayName: Download dotNET Artifacts
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                set -e
+                find '$(Pipeline.Workspace)' -name "*.symbols.*" -type f | xargs -I {} rm -r {} || true
+                find '$(Pipeline.Workspace)' -name "*symbols*" -type d | xargs -I {} rm -r {} || true
+            displayName: Remove Symbols
+#"target" aka commit SHA MUST be found in "repositoryName"!
+          - task: GitHubRelease@1
+            inputs:
+              gitHubConnection: 'github.com_Thefrank'
+              repositoryName: 'Thefrank/dotnet-freebsd-crossbuild'
+              action: 'edit'
+              target: '${{ parameters.publishSHA }}'
+              tag: '${{ parameters.vmrTag }}-${{ parameters.containerCrossOS }}-freebsd-${{ parameters.containerCrossOSVersion }}'
+              title: '${{ parameters.vmrTag }}'
+              releaseNotesSource: 'inline'
+              releaseNotesInline: |
+                '${{ parameters.vmrTag }} Portable! -> with debug_info, not stripped <-
+                
+                Crossbuilt under Linux using Microsoft's Docker container (AzureLinux 3 + FreeBSD 14.2 ROOTFS)
+                
+                Container ID: $DOTNETDOCKERCONTAINERUSED'
+              assets: |
+                $(Pipeline.Workspace)/a/dotnetAssets/Release/SDK/${{ parameters.vmrTag }}/**
+                $(Pipeline.Workspace)/a/dotnetAssets/Release/Private.SourceBuilt.Artifacts.${{ parameters.vmrTag }}.freebsd-$ROOTFSARCH.tar.gz
+                $(Pipeline.Workspace)/a/dotnetPackages/Release/Shipping/runtime/Microsoft.NETCore.App.Crossgen2**.nupkg
+              isDraft: true
+              isPreRelease: true
+              addChangeLog: false
+            displayName: Upload VMR Product to Github
+          - task: Bash@3
+            condition: and (eq('${{ parameters.cleanRepo }}', 'true'), in(variables['Agent.JobStatus'], 'Succeeded', 'SucceededWithIssues'))
+            inputs:
+              targetType: 'inline'
+              script: |
+                set -e
+                rm -r '$(Pipeline.Workspace)/a'
+            displayName: Clean Up $(System.StageDisplayName)
+  - stage: publishnuget
+    dependsOn: [dotnet]
+    condition: and(succeeded(),eq('${{ parameters.publishNuGet }}', 'true'))
+    jobs:
+      - job: Build
+        timeoutInMinutes: 120
+        workspace:
+          clean: all
+        steps:
+          - checkout: self
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              buildType: 'current'
+              artifactName: 'dotnetPackages'
+              itemPattern: '**/Microsoft.*.freebsd*.*.nupkg'
+              targetPath: '$(Pipeline.Workspace)/a'
+            displayName: Download dotNET Artifacts
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              buildType: 'current'
+              artifactName: 'dotnetAssets'
+              itemPattern: '**/Microsoft.*.freebsd*.*.nupkg'
+              targetPath: '$(Pipeline.Workspace)/a'
+            displayName: Download dotNET Artifacts
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                find '$(Pipeline.Workspace)' -name "*.symbols.*" -type f | xargs -I {} rm -r {} || true
+                find '$(Pipeline.Workspace)' -name "*symbols*" -type d | xargs -I {} rm -r {} || true
+            displayName: Remove Symbols
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                dotnet nuget remove source GHP || true
+                dotnet nuget add source --username $GHPN  --password $GHPP --store-password-in-clear-text --name GHP "https://nuget.pkg.github.com/TheFrank/index.json" || true
+                dotnet nuget push $(Build.SourcesDirectory)/*.nupkg --api-key $GHPP  --source "GHP" --skip-duplicate
+            displayName: Publish NuGet to GH
+            env: 
+              GHPP: $(GHPP)
+              GHPN: $(GHPN)
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                dotnet nuget remove source AZPP || true
+                dotnet nuget add source --username $AZPN --password $AZPAT --store-password-in-clear-text --name "AZPP" https://pkgs.dev.azure.com/IFailAt/freebsd-dotnet-runtime-nightly/_packaging/freebsd-dotnet/nuget/v3/index.json  || true
+                dotnet nuget push $(Build.SourcesDirectory)/*.nupkg --api-key az  --source "AZPP" --skip-duplicate
+            displayName: Publish NuGet to AZP
+            env: 
+              AZPAT: $(AZPAT) 
+              AZPN: $(AZPN)
+          - task: Bash@3
+            condition: and (eq('${{ parameters.cleanRepo }}', 'true'), in(variables['Agent.JobStatus'], 'Succeeded', 'SucceededWithIssues'))
+            inputs:
+              targetType: 'inline'
+              script: |
+                rm $(Build.SourcesDirectory)/* || true
+            displayName: Clean Up $(System.StageDisplayName)
+          - task: Bash@3
+            condition: succeededOrFailed()
+            inputs:
+              targetType: 'inline'
+              script: |
+                dotnet nuget remove source GHP || true
+                dotnet nuget remove source AZPP || true
+            displayName: Delete sources
