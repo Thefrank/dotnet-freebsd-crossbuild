@@ -190,10 +190,11 @@ stages:
               targetType: 'inline'
               script: |
                 set -e
-                find '$(Pipeline.Workspace)' -name "*.symbols.*" -type f | xargs -I {} rm -r {} || true
-                find '$(Pipeline.Workspace)' -name "*symbols*" -type d | xargs -I {} rm -r {} || true
+                find '$(Pipeline.Workspace)' -name "*.symbols.*" -type f -print0 | xargs -0 -t -I {} rm -r {} || true
+                find '$(Pipeline.Workspace)' -name "*symbols*" -type d -print0 | xargs -0 -t -I {} rm -r {} || true
             displayName: Remove Symbols
 #"target" aka commit SHA MUST be found in "repositoryName"!
+#${{ parameters.vmrTag }} contains a leading "v"
           - task: GitHubRelease@1
             inputs:
               gitHubConnection: 'github.com_Thefrank'
@@ -210,8 +211,8 @@ stages:
                                 
                 Container ID: $(DOTNETDOCKERCONTAINERUSED)
               assets: |
-                $(Pipeline.Workspace)/a/dotnetAssets/Release/SDK/${{ parameters.vmrTag }}/**
-                $(Pipeline.Workspace)/a/dotnetAssets/Release/Private.SourceBuilt.Artifacts.${{ parameters.vmrTag }}.freebsd-$(ROOTFSARCH).tar.gz
+                $(Pipeline.Workspace)/a/dotnetAssets/Release/Sdk/**/**
+                $(Pipeline.Workspace)/a/dotnetAssets/Release/Private.SourceBuilt.Artifacts*freebsd-$(ROOTFSARCH).tar.gz
                 $(Pipeline.Workspace)/a/dotnetPackages/Release/Shipping/runtime/Microsoft.NETCore.App.Crossgen2**.nupkg
               isDraft: true
               isPreRelease: true
@@ -239,22 +240,22 @@ stages:
             inputs:
               buildType: 'current'
               artifactName: 'dotnetPackages'
-              itemPattern: '**/Microsoft.*.freebsd*.*.nupkg'
+              itemPattern: '**/*freebsd*nupkg'
               targetPath: '$(Pipeline.Workspace)/a'
             displayName: Download dotNET Artifacts
           - task: DownloadPipelineArtifact@2
             inputs:
               buildType: 'current'
               artifactName: 'dotnetAssets'
-              itemPattern: '**/Microsoft.*.freebsd*.*.nupkg'
+              itemPattern: '**/*freebsd*nupkg'
               targetPath: '$(Pipeline.Workspace)/a'
             displayName: Download dotNET Artifacts
           - task: Bash@3
             inputs:
               targetType: 'inline'
               script: |
-                find '$(Pipeline.Workspace)' -name "*.symbols.*" -type f | xargs -I {} rm -r {} || true
-                find '$(Pipeline.Workspace)' -name "*symbols*" -type d | xargs -I {} rm -r {} || true
+                find '$(Pipeline.Workspace)' -name "*.symbols.*" -type f -print0 | xargs -0 -t -I {} rm -r {} || true
+                find '$(Pipeline.Workspace)' -name "*symbols*" -type d -print0 | xargs -0 -t -I {} rm -r {} || true
             displayName: Remove Symbols
           - task: Bash@3
             inputs:
@@ -262,7 +263,7 @@ stages:
               script: |
                 dotnet nuget remove source GHP || true
                 dotnet nuget add source --username $GHPN  --password $GHPP --store-password-in-clear-text --name GHP "https://nuget.pkg.github.com/TheFrank/index.json" || true
-                dotnet nuget push $(Build.SourcesDirectory)/*.nupkg --api-key $GHPP  --source "GHP" --skip-duplicate
+                dotnet nuget push $(Pipeline.Workspace)/a/*.nupkg --api-key $GHPP  --source "GHP" --skip-duplicate
             displayName: Publish NuGet to GH
             env: 
               GHPP: $(GHPP)
@@ -273,7 +274,7 @@ stages:
               script: |
                 dotnet nuget remove source AZPP || true
                 dotnet nuget add source --username $AZPN --password $AZPAT --store-password-in-clear-text --name "AZPP" https://pkgs.dev.azure.com/IFailAt/freebsd-dotnet-runtime-nightly/_packaging/freebsd-dotnet/nuget/v3/index.json  || true
-                dotnet nuget push $(Build.SourcesDirectory)/*.nupkg --api-key az  --source "AZPP" --skip-duplicate
+                dotnet nuget push $(Pipeline.Workspace)/a/*.nupkg --api-key az  --source "AZPP" --skip-duplicate
             displayName: Publish NuGet to AZP
             env: 
               AZPAT: $(AZPAT) 
@@ -284,6 +285,7 @@ stages:
               targetType: 'inline'
               script: |
                 rm $(Build.SourcesDirectory)/* || true
+                rm $(Pipeline.Workspace)/a/* || true
             displayName: Clean Up $(System.StageDisplayName)
           - task: Bash@3
             condition: succeededOrFailed()
