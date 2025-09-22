@@ -113,7 +113,7 @@ stages:
             inputs:
               targetType: 'inline'
               script: |
-                echo "##vso[task.setvariable variable=DOTNETDOCKERCONTAINERUSED]$(echo "mcr.microsoft.com/dotnet-buildtools/prereqs:$(curl -s https://raw.githubusercontent.com/dotnet/versions/master/build-info/docker/image-info.dotnet-dotnet-buildtools-prereqs-docker-main.json | jq -r '.repos[0].images[] | select(.platforms[0].simpleTags[0] | contains("freebsd-${{ parameters.containerCrossOSVersion }}-${{ parameters.containerCrossOS }}")) | .platforms[0].simpleTags[0]')" head -1)"
+                echo "##vso[task.setvariable variable=DOTNETDOCKERCONTAINERUSED;isOutput=true]$(echo "mcr.microsoft.com/dotnet-buildtools/prereqs:$(curl -s https://raw.githubusercontent.com/dotnet/versions/master/build-info/docker/image-info.dotnet-dotnet-buildtools-prereqs-docker-main.json | jq -r '.repos[0].images[] | select(.platforms[0].simpleTags[0] | contains("freebsd-${{ parameters.containerCrossOSVersion }}-${{ parameters.containerCrossOS }}")) | .platforms[0].simpleTags[0]')" head -1)"
             displayName: Setup Container
           - task: Bash@3
             inputs:
@@ -242,14 +242,15 @@ stages:
               artifactName: 'dotnetPackages'
               itemPattern: '**/*freebsd*nupkg'
               targetPath: '$(Pipeline.Workspace)/a'
-            displayName: Download dotNET Artifacts
+            displayName: Download dotnetPackages
           - task: DownloadPipelineArtifact@2
             inputs:
               buildType: 'current'
               artifactName: 'dotnetAssets'
               itemPattern: '**/*freebsd*nupkg'
               targetPath: '$(Pipeline.Workspace)/a'
-            displayName: Download dotNET Artifacts
+            displayName: Download dotnetAssets
+# remove -t after double checking outputs
           - task: Bash@3
             inputs:
               targetType: 'inline'
@@ -257,13 +258,14 @@ stages:
                 find '$(Pipeline.Workspace)' -name "*.symbols.*" -type f -print0 | xargs -0 -t -I {} rm -r {} || true
                 find '$(Pipeline.Workspace)' -name "*symbols*" -type d -print0 | xargs -0 -t -I {} rm -r {} || true
             displayName: Remove Symbols
+# does ** actually work?
           - task: Bash@3
             inputs:
               targetType: 'inline'
               script: |
                 dotnet nuget remove source GHP || true
                 dotnet nuget add source --username $GHPN  --password $GHPP --store-password-in-clear-text --name GHP "https://nuget.pkg.github.com/TheFrank/index.json" || true
-                dotnet nuget push $(Pipeline.Workspace)/a/*.nupkg --api-key $GHPP  --source "GHP" --skip-duplicate
+                dotnet nuget push $(Pipeline.Workspace)/a/**/*.nupkg --api-key $GHPP  --source "GHP" --skip-duplicate
             displayName: Publish NuGet to GH
             env: 
               GHPP: $(GHPP)
@@ -274,19 +276,11 @@ stages:
               script: |
                 dotnet nuget remove source AZPP || true
                 dotnet nuget add source --username $AZPN --password $AZPAT --store-password-in-clear-text --name "AZPP" https://pkgs.dev.azure.com/IFailAt/freebsd-dotnet-runtime-nightly/_packaging/freebsd-dotnet/nuget/v3/index.json  || true
-                dotnet nuget push $(Pipeline.Workspace)/a/*.nupkg --api-key az  --source "AZPP" --skip-duplicate
+                dotnet nuget push $(Pipeline.Workspace)/a/**/*.nupkg --api-key az  --source "AZPP" --skip-duplicate
             displayName: Publish NuGet to AZP
             env: 
               AZPAT: $(AZPAT) 
               AZPN: $(AZPN)
-          - task: Bash@3
-            condition: and (eq('${{ parameters.cleanRepo }}', 'true'), in(variables['Agent.JobStatus'], 'Succeeded', 'SucceededWithIssues'))
-            inputs:
-              targetType: 'inline'
-              script: |
-                rm $(Build.SourcesDirectory)/* || true
-                rm $(Pipeline.Workspace)/a/* || true
-            displayName: Clean Up $(System.StageDisplayName)
           - task: Bash@3
             condition: succeededOrFailed()
             inputs:
@@ -295,3 +289,12 @@ stages:
                 dotnet nuget remove source GHP || true
                 dotnet nuget remove source AZPP || true
             displayName: Delete sources
+          - task: Bash@3
+            condition: and (eq('${{ parameters.cleanRepo }}', 'true'), in(variables['Agent.JobStatus'], 'Succeeded', 'SucceededWithIssues'))
+            inputs:
+              targetType: 'inline'
+              script: |
+                set -e
+                rm -r $(Build.SourcesDirectory)/* || true
+                rm -r $(Pipeline.Workspace)/a/* || true
+            displayName: Clean Up $(System.StageDisplayName)
