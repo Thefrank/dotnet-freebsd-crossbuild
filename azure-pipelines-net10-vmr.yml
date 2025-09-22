@@ -113,7 +113,7 @@ stages:
             inputs:
               targetType: 'inline'
               script: |
-                echo "##vso[task.setvariable variable=DOTNETDOCKERCONTAINERUSED;isOutput=true]$(echo "mcr.microsoft.com/dotnet-buildtools/prereqs:$(curl -s https://raw.githubusercontent.com/dotnet/versions/master/build-info/docker/image-info.dotnet-dotnet-buildtools-prereqs-docker-main.json | jq -r '.repos[0].images[] | select(.platforms[0].simpleTags[0] | contains("freebsd-${{ parameters.containerCrossOSVersion }}-${{ parameters.containerCrossOS }}")) | .platforms[0].simpleTags[0]')" head -1)"
+                echo "##vso[task.setvariable variable=DOTNETDOCKERCONTAINERUSED]$(echo "mcr.microsoft.com/dotnet-buildtools/prereqs:$(curl -s https://raw.githubusercontent.com/dotnet/versions/master/build-info/docker/image-info.dotnet-dotnet-buildtools-prereqs-docker-main.json | jq -r '.repos[0].images[] | select(.platforms[0].simpleTags[0] | contains("freebsd-${{ parameters.containerCrossOSVersion }}-${{ parameters.containerCrossOS }}")) | .platforms[0].simpleTags[0]')" head -1)"
             displayName: Setup Container
           - task: Bash@3
             inputs:
@@ -168,6 +168,7 @@ stages:
                 docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED /bin/bash -c "git config --global --add safe.directory /dotnet && git -C /dotnet clean -ffdx"
                 docker system prune --all --force --filter "until=720h"
                 docker volume prune --all --force
+                echo "##vso[task.setvariable variable=DOTNETDOCKERCONTAINERUSED;isOutput=true]$(echo "mcr.microsoft.com/dotnet-buildtools/prereqs:$(curl -s https://raw.githubusercontent.com/dotnet/versions/master/build-info/docker/image-info.dotnet-dotnet-buildtools-prereqs-docker-main.json | jq -r '.repos[0].images[] | select(.platforms[0].simpleTags[0] | contains("freebsd-${{ parameters.containerCrossOSVersion }}-${{ parameters.containerCrossOS }}")) | .platforms[0].simpleTags[0]')" head -1)"
             displayName: Clean Up Docker and $(System.StageDisplayName)
   - stage: publishgithub
     dependsOn: [dotnet]
