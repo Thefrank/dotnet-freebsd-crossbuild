@@ -16,10 +16,9 @@ Currently working for:
 
 Built outside of repo but published here: v9.0.100-preview.3.24204.13, v10.0.100-preview.1.25120.13, v10.0.100-preview.2.25164.34, v10.0.100-preview.3.25201.16, v10.0.100-preview.5.25277.114 (script needs updates)
 
-VMR as of net10p7 the VMR fully supports crossbuilds!
+VMR as of net10p7 the VMR fully supports crossbuilds! General build instructions can be found [here](https://github.com/dotnet/dotnet?tab=readme-ov-file#building)
 
-
-Scripts might require some tweaks. As an example some dotNET6 backports are officially backported.
+I will try and provide the SourceBuilt artifacts and SDK under releases. NuGets will remain under both Azure feed and Github for this repo.
 
 If you want a more comprehensive, repo-by-repo script setup: 
 @sec also has a (better) native crossgen build that can be found here: https://github.com/sec/dotnet-core-freebsd-source-build
