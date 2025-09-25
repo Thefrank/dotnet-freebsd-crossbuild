@@ -207,14 +207,15 @@ stages:
               releaseNotesSource: 'inline'
               releaseNotesInline: |
                 Portable ${{ parameters.vmrTag }} -> with debug_info, not stripped <-
-                                
+                
                 Crossbuilt under Linux using Microsoft's Docker container (AzureLinux 3 + FreeBSD 14.2 ROOTFS)
-                                
-                Container ID: $DOTNETDOCKERCONTAINERUSED
+                
+                This SDK should not need any external NuGet packages. Crossgen2, ILC, and NativeAOT are all included. 
+                
+                I still provide external NuGet packages via Azure and GitHub feeds. Please see the README.md for more information on them.
               assets: |
                 $(Pipeline.Workspace)/a/dotnetAssets/Release/Sdk/**/**
                 $(Pipeline.Workspace)/a/dotnetAssets/Release/Private.SourceBuilt.Artifacts*freebsd-$(ROOTFSARCH).tar.gz
-                $(Pipeline.Workspace)/a/dotnetPackages/Release/Shipping/runtime/Microsoft.NETCore.App.Crossgen2**.nupkg
               isDraft: true
               isPreRelease: true
               addChangeLog: false
