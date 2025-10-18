@@ -23,11 +23,11 @@ parameters:
 - name: vmrTag
   displayName: Tag for dotnet/dotnet Repo (VMR)
   type: string
-  default: v10.0.100-rc.1.25451.107
+  default: v10.0.100-rc.2.25502.107
 - name: publishSHA
   displayName: SHA to use for update on GH
   type: string
-  default: 12c53c69a21ae89595a5af79b266b2256e8cc919
+  default: e2b6a6ca923ddc45ae9234d219e92e0bba1eebd8
 - name: publishLogs
   displayName: Publish logs (to artifacts)?
   type: boolean
