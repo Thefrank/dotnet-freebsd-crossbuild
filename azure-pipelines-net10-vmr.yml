@@ -140,7 +140,7 @@ stages:
                 BUILDID=$(curl -L https://github.com/dotnet/dotnet/releases/download/${{ parameters.vmrTag }}/release.json | jq -r ".officialBuildId")
                 docker run -e ROOTFS_DIR=/crossrootfs/$ROOTFSARCH -w /dotnet -v $(pwd)/dotnet:/dotnet $DOTNETDOCKERCONTAINERUSED  ./build.sh --prep --configuration  ${{ parameters.buildType }} --ci --target-os freebsd --target-arch $ROOTFSARCH --target-rid freebsd-x64 --source-build --clean-while-building --official-build-id $BUILDID -p:PortableBuild=true -p:PortableTargetRid=freebsd-x64 -p:CrossBuild=true -p:SkipUsingCrossgen=true -p:BundleCrossgen2=true ${{ parameters.extraParameters }}
             displayName: Build $(System.StageDisplayName)
-# testing /p:UseSymboliclinksIfPossible=false
+# testing /p:UseSymboliclinksIfPossible=false and /p:UseHardlinksIfPossible=false
           - task: PublishPipelineArtifact@1
             inputs:
               targetPath: '$(Build.SourcesDirectory)/$(System.StageDisplayName)/artifacts/assets'
