@@ -10,7 +10,7 @@ Currently working for:
 
 - v9.0.111 (SDK version != runtime version. Ask Microsoft why they are disjointed), 
 
-- ~v8.0.300~ 8.0.121 (there was no 8.0.109?), 
+- ~v8.0.300~ 8.0.122 (there was no 8.0.109?), 
 
 - ~6.0.423~ 6.0.136 (there was no 6.0.134?), and older (check commits and/or tags if you want to build old versions).
 
