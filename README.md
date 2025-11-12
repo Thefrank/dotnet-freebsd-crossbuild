@@ -14,7 +14,7 @@ Currently working for:
 
 - ~6.0.423~ 6.0.136 (there was no 6.0.134?), and older (check commits and/or tags if you want to build old versions).
 
-Built outside of repo but published here: v9.0.100-preview.3.24204.13, v10.0.100-preview.1.25120.13, v10.0.100-preview.2.25164.34, v10.0.100-preview.3.25201.16, v10.0.100-preview.5.25277.114, v10.0.100-RC1, v10.0.100-RC2 (script needs updates)
+Built outside of repo but published here: v9.0.100-preview.3.24204.13, v10.0.100-preview.1.25120.13, v10.0.100-preview.2.25164.34, v10.0.100-preview.3.25201.16, v10.0.100-preview.5.25277.114, v10.0.100-RC1, v10.0.100-RC2, v10.0.100 (script needs updates)
 
 VMR as of net10p7 the VMR fully supports crossbuilds! General build instructions can be found [here](https://github.com/dotnet/dotnet?tab=readme-ov-file#building)
 
