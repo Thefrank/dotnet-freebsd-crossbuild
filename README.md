@@ -18,6 +18,8 @@ Built outside of repo but published here: v9.0.100-preview.3.24204.13, v10.0.100
 
 VMR as of net10p7 the VMR fully supports crossbuilds! General build instructions can be found [here](https://github.com/dotnet/dotnet?tab=readme-ov-file#building)
 
+Ports `pkg install dotnet` will be the most direct way to get dotNET for FreeBSD
+
 I will try and provide the SourceBuilt artifacts and SDK under releases. NuGets will remain under both Azure feed and Github for this repo.
 
 If you want a more comprehensive, repo-by-repo script setup: 
