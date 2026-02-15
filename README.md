@@ -4,42 +4,33 @@ Yes. This needs an overhaul.
 
 ## NOTE(S)
 
-The Y.0.1xx branch is used for net8 and net9 due to a merging of the `sdk` and `installer` repos.
-
-Currently working for: 
-
-- v9.0.114 (SDK version != runtime version. Ask Microsoft why they are disjointed), 
-
-- ~v8.0.300~ 8.0.124 (there was no 8.0.109?), 
-
-- ~6.0.423~ 6.0.136 (there was no 6.0.134?), and older (check commits and/or tags if you want to build old versions).
-
-Built outside of repo but published here: v9.0.100-preview.3.24204.13, v10.0.100-preview.1.25120.13, v10.0.100-preview.2.25164.34, v10.0.100-preview.3.25201.16, v10.0.100-preview.5.25277.114, v10.0.100-RC1, v10.0.100-RC2, v10.0.100->v10.0.103 (script needs updates)
-
 VMR as of net10p7 the VMR fully supports crossbuilds! General build instructions can be found [here](https://github.com/dotnet/dotnet?tab=readme-ov-file#building)
 
-Ports `pkg install dotnet` will be the most direct way to get dotNET for FreeBSD
+**Ports `pkg install dotnet` will be the most direct way to get dotNET for FreeBSD**
 
 I will try and provide the SourceBuilt artifacts and SDK under releases. NuGets will remain under both Azure feed and Github for this repo.
 
 If you want a more comprehensive, repo-by-repo script setup: 
 @sec also has a (better) native crossgen build that can be found here: https://github.com/sec/dotnet-core-freebsd-source-build
-The SDK is also in FreeBSD ports. You can just `pkg install dotnet`
 
 ## What is here?
 
-Currently published here: 
+The Y.0.1xx branch is used for net8 and net9 due to a merging of the `sdk` and `installer` repos.
 
-FreeBSD 12.4 (EOL)
-- net8 SDK <= 8.0.100
-- net7 SDK <= 7.0.403
-- net6 SDK <= 6.0.416
+Currently working for: 
+- v9.0.114 (SDK version != runtime version. Ask Microsoft why they are disjointed), 
+- ~v8.0.300~ 8.0.124 (there was no 8.0.109?)
 
-FreeBSD 13
-- net8 SDK >= 8.0.101
-- net7 SDK >= 7.0.405 (EOL June 2024)
-- net6 SDK >= 6.0.418
+EOL: 
+- ~6.0.423~ 6.0.136 (there was no 6.0.134?), and older (check commits and/or tags if you want to build old versions).
 
+Built outside of repo but published here:
+
+- NET9: v9.0.100 v9.0.114 (SDK version != runtime version. Ask Microsoft why they are disjointed) 
+- NET10: v10.0.100-preview.1.25120.13->v10.0.103
+- NET11: v11.0.100-preview.1.26104.118
+
+- 
 ## Why would I use this?
 You don't need / want SDK builds in Azure DevOPS
 
@@ -66,7 +57,6 @@ For building code, you will need:
 NEW!: This public feed should provide (most) of my (recently) built items: 
 - https://pkgs.dev.azure.com/IFailAt/freebsd-dotnet-runtime-nightly/_packaging/freebsd-dotnet/nuget/v3/index.json
   - Cons: As this is Azure-based it will be limited to only the RTM and the newest few releases
-  - Cons: Due to limited storage this only contains FreeBSD 12.4 supported NuGets
   - Pros: Easy to add to NuGet.config or donet source list, no auth needed
 - https://nuget.pkg.github.com/TheFrank/index.json
   - Cons: requires API auth but any GH account should be able to access it 
@@ -104,6 +94,6 @@ You will also need these NuGet packages produced by this repo or the Azure versi
 ## Got Azure DevOPS version?
 Yes! The Servarr teams maintains: https://github.com/Servarr/dotnet-bsd
 
-## Updates
+## Updates / Bugs
 
-Open a ticket if I am more than a few days behind an official release and I will try and get an update published as quick as I can
+Open a ticket if I am more than a few days behind an official release and I will try and get an update published as quick as I can. Same with bug reports.
