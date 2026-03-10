@@ -19,7 +19,7 @@ The Y.0.1xx branch is used for net8 and net9 due to a merging of the `sdk` and `
 
 Currently working for: 
 - v9.0.114 (SDK version != runtime version. Ask Microsoft why they are disjointed), 
-- ~v8.0.300~ 8.0.124 (there was no 8.0.109?)
+- ~v8.0.300~ 8.0.125 (there was no 8.0.109?)
 
 EOL: 
 - ~6.0.423~ 6.0.136 (there was no 6.0.134?), and older (check commits and/or tags if you want to build old versions).
