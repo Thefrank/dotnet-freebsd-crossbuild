@@ -18,7 +18,7 @@ If you want a more comprehensive, repo-by-repo script setup:
 The Y.0.1xx branch is used for net8 and net9 due to a merging of the `sdk` and `installer` repos.
 
 Currently working for: 
-- v9.0.115 (SDK version != runtime version. Ask Microsoft why they are disjointed), 
+- v9.0.110 (SDK version != runtime version. Ask Microsoft why they are disjointed), 
 - ~v8.0.300~ 8.0.127 (there was no 8.0.109?)
 
 EOL: 
@@ -26,7 +26,7 @@ EOL:
 
 Built outside of repo but published here:
 
-- NET9: v9.0.100 v9.0.115 (SDK version != runtime version. Ask Microsoft why they are disjointed) 
+- NET9: v9.0.100 v9.0.117 (SDK version != runtime version. Ask Microsoft why they are disjointed) 
 - NET10: v10.0.100-preview.1.25120.13->v10.0.106 / v10.0.202 ( Note: 10.0.4 as SDK 10.0.200 or 10.0.104 is not built as it was quickly replaced by x.201 and x.105)
 - NET11: v11.0.100-preview.1.26104.118->v11.0.100-preview.3.26207.106
 
