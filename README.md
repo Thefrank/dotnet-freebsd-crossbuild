@@ -26,7 +26,7 @@ EOL:
 
 Built outside of repo but published here:
 
-- NET9: v9.0.100->v9.0.118 (SDK version != runtime version. Ask Microsoft why they are disjointed) 
+- NET9: v9.0.100->v9.0.119 (SDK version != runtime version. Ask Microsoft why they are disjointed) 
 - NET10: v10.0.100-preview.1.25120.13->v10.0.109 / v10.0.202 ( Note: 10.0.4 as SDK 10.0.200 or 10.0.104 is not built as it was quickly replaced by x.201 and x.105)
 - NET11: v11.0.100-preview.1.26104.118->v11.0.100-preview.5.26302.115
 
